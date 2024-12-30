@@ -3,311 +3,325 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Canvas Edito</title>
+    <title>Diseñador de Camisetas</title>
     <style>
         body {
-            font-family: Arial, sans-serif;
             margin: 0;
             padding: 0;
-            background-color: #f4f4f9;
+            font-family: Arial, sans-serif;
+            background-color: #f5f5f5;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
         }
+
+        .color-buttons, .size-buttons {
+            display: flex;
+            gap: 10px;
+            margin: 10px 0;
+        }
+
+        .color-button, .size-button {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            font-size: 14px;
+        }
+
+        .color-button {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+        }
+
+        .color-black { background-color: black; }
+        .color-white { background-color: white; border: 1px solid #ccc; }
+        .color-gray { background-color: gray; }
+        .color-red { background-color: red; }
+        .color-blue { background-color: blue; }
+
+        .size-button { background-color: #fff; }
 
         .tabs {
             display: flex;
             justify-content: center;
-            background-color: #333;
-            padding: 10px 0;
+            margin: 10px 0;
         }
 
         .tab {
-            color: white;
             padding: 10px 20px;
             cursor: pointer;
-            border: none;
-            background-color: inherit;
-            font-size: 16px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background-color: #fff;
+            margin: 0 5px;
             transition: background-color 0.3s ease;
-        }
-
-        .tab:hover {
-            background-color: #444;
         }
 
         .tab.active {
             background-color: #007BFF;
-            font-weight: bold;
-        }
-
-        .tab-content {
-            display: none;
-            padding: 20px;
-            margin-top: 20px;
-            background-color: white;
-            border-radius: 8px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-        }
-
-        .tab-content.active {
-            display: block;
-        }
-
-        .container {
-            display: flex;
-            justify-content: center;
-            gap: 40px;
-            padding: 20px;
+            color: white;
         }
 
         .canvas-container {
-            width: 60%;
-            border-radius: 8px;
-            overflow: hidden;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-        }
-
-        #movie-canvas {
-            border: 1px solid #ccc;
-            margin-top: 10px;
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
             background-color: #fff;
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            width: 100%;
+            max-width: 500px;
+            height: 600px;
         }
 
-        .controls {
-            width: 35%;
-            display: flex;
-            flex-direction: column;
+        canvas {
+            max-width: 100%;
+            max-height: 100%;
         }
 
-        .color-palette {
-            display: flex;
+        .toolbar {
+            justify-content: center;
+            flex-wrap: wrap;
             gap: 10px;
-            margin-bottom: 20px;
+            margin: 10px 0;
         }
 
-        .color-button {
-            width: 30px;
-            height: 30px;
-            border-radius: 50%;
-            cursor: pointer;
-        }
-
-        .text-controls,
-        .image-controls {
-            margin-bottom: 20px;
-        }
-
-        button {
-            padding: 10px 20px;
-            margin-top: 10px;
-            cursor: pointer;
+        .context-menu button {
             background-color: #007BFF;
-            color: white;
             border: none;
             border-radius: 5px;
+            padding: 10px;
+            color: white;
+            cursor: pointer;
+            font-size: 14px;
             transition: background-color 0.3s ease;
         }
 
-        button:hover {
+        .context-menu button:hover {
             background-color: #0056b3;
         }
 
-        input[type="color"],
-        input[type="number"],
-        select {
+        .context-menu input, .context-menu select {
             padding: 5px;
-            margin-top: 5px;
-            margin-bottom: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
         }
 
-        #dimensions {
-            margin-top: 10px;
+        .context-menu label {
             font-size: 14px;
-            color: #555;
         }
     </style>
 </head>
 <body>
-    <!-- Pestañas -->
-    <div class="tabs">
-        <div class="tab active" onclick="changeTab(0)">Principal</div>
-        <div class="tab" onclick="changeTab(1)">Pestaña 1</div>
-        <div class="tab" onclick="changeTab(2)">Pestaña 2</div>
-        <div class="tab" onclick="changeTab(3)">Pestaña 3</div>
+    <div class="color-buttons">
+        <div class="color-button color-black" onclick="changeTshirtColor('black')"></div>
+        <div class="color-button color-white" onclick="changeTshirtColor('white')"></div>
+        <div class="color-button color-gray" onclick="changeTshirtColor('gray')"></div>
+        <div class="color-button color-red" onclick="changeTshirtColor('red')"></div>
+        <div class="color-button color-blue" onclick="changeTshirtColor('blue')"></div>
     </div>
 
-    <!-- Contenido de las pestañas -->
-    <div class="tab-content active" id="tab-0">
-        <div class="container">
-            <div class="canvas-container">
-                <canvas id="movie-canvas" width="550" height="600"></canvas>
-                <div id="dimensions"></div>
-            </div>
-            <div class="controls">
-                <h3>Opciones</h3>
-                <div class="color-palette">
-                    <div class="color-button" style="background-color: red;" onclick="changeBackground('red')"></div>
-                    <div class="color-button" style="background-color: blue;" onclick="changeBackground('blue')"></div>
-                    <div class="color-button" style="background-color: green;" onclick="changeBackground('green')"></div>
-                </div>
-                <div class="text-controls">
-                    <button onclick="addText()">Agregar Texto</button>
-                    <label for="text-color">Color:</label>
-                    <input type="color" id="text-color" onchange="updateTextColor()">
+    <div class="size-buttons">
+        <div class="size-button" onclick="addSize('XXS')">XXS</div>
+        <div class="size-button" onclick="addSize('XS')">XS</div>
+        <div class="size-button" onclick="addSize('S')">S</div>
+        <div class="size-button" onclick="addSize('M')">M</div>
+        <div class="size-button" onclick="addSize('L')">L</div>
+        <div class="size-button" onclick="addSize('XL')">XL</div>
+        <div class="size-button" onclick="addSize('XXL')">XXL</div>
+    </div>
 
-                    <label for="text-size">Tamaño:</label>
-                    <input type="number" id="text-size" min="10" max="100" value="20" onchange="updateTextSize()">
+    <div class="tabs">
+        <div class="tab active" onclick="switchTab('front')">Pecho</div>
+        <div class="tab" onclick="switchTab('back')">Espalda</div>
+        <div class="tab" onclick="switchTab('left-sleeve')">Manga Izquierda</div>
+        <div class="tab" onclick="switchTab('right-sleeve')">Manga Derecha</div>
+    </div>
 
-                    <label for="text-font">Fuente:</label>
-                    <select id="text-font" onchange="updateTextFont()">
-                        <option value="Arial">Arial</option>
-                        <option value="Verdana">Verdana</option>
-                        <option value="Times New Roman">Times New Roman</option>
-                        <option value="Georgia">Georgia</option>
-                    </select>
-                </div>
-                <div class="image-controls">
-                    <button onclick="openImageUploader()">Subir Imagen</button>
-                    <button onclick="deleteSelectedElement()">Eliminar Selección</button>
-                    <button onclick="downloadCanvas()">Descargar Canvas</button>
-                </div>
-                <input type="file" id="image-input" style="display: none;" accept="image/*" onchange="uploadImage()">
-            </div>
+    <div class="canvas-container">
+        <canvas id="tshirt-canvas" width="400" height="500"></canvas>
+    </div>
+
+    <div id="context-menu" class="context-menu" style="display:none; position: absolute;">
+        <div class="toolbar" id="text-toolbar">
+            <label for="text-color">Color de Texto:</label>
+            <input type="color" id="text-color" onchange="updateTextColor()">
+
+            <label for="text-size">Tamaño:</label>
+            <input type="number" id="text-size" value="20" min="10" max="100" onchange="updateTextSize()">
+
+            <label for="text-border">Borde:</label>
+            <input type="color" id="text-border" onchange="updateTextBorder()">
+        </div>
+
+        <div class="toolbar" id="image-toolbar">
+            <label for="image-border">Borde:</label>
+            <input type="color" id="image-border" onchange="updateImageBorder()">
+
+            <button onclick="deleteSelectedObject()">Eliminar</button>
         </div>
     </div>
 
-    <div class="tab-content" id="tab-1">
-        <!-- Aquí va el contenido similar al anterior -->
-        <!-- Puedes duplicar el contenido de la pestaña principal para la pestaña 1 -->
+    <div class="controls">
+        <button class="button" onclick="addText()">Agregar Texto</button>
+        <button class="button" onclick="addImage()">Agregar Imagen</button>
     </div>
 
-    <div class="tab-content" id="tab-2">
-        <!-- Similar a las anteriores -->
-    </div>
-
-    <div class="tab-content" id="tab-3">
-        <!-- Similar a las anteriores -->
-    </div>
+    <input type="file" id="image-input" style="display: none;" accept="image/*" onchange="uploadImage()">
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/4.5.0/fabric.min.js"></script>
     <script>
-        var canvas = new fabric.Canvas('movie-canvas', { selection: true });
-        var selectedElement = null;
-
-        // Map of colors to background images
-        var colorImages = {
-            'red': 'ruta/imagen/roja.jpg',
-            'blue': 'ruta/imagen/azul.jpg',
-            'green': 'ruta/imagen/verde.jpg'
+        const contextMenu = document.getElementById('context-menu');
+        let canvas = new fabric.Canvas('tshirt-canvas');
+        let selectedTab = 'front';
+        let sections = {
+            front: null,
+            back: null,
+            leftSleeve: null,
+            rightSleeve: null
         };
 
-        function changeTab(tabIndex) {
-            var tabs = document.querySelectorAll('.tab');
-            var tabContents = document.querySelectorAll('.tab-content');
-            
-            tabs.forEach((tab, index) => {
-                tab.classList.remove('active');
-                tabContents[index].classList.remove('active');
-            });
-            
-            tabs[tabIndex].classList.add('active');
-            tabContents[tabIndex].classList.add('active');
-        }
+        fabric.Image.fromURL('https://via.placeholder.com/400x500?text=Camiseta+Negra', function(img) {
+            img.selectable = false;
+            img.evented = false;
+            img.scaleToWidth(canvas.width);
+            img.scaleToHeight(canvas.height);
+            canvas.setBackgroundImage(img, canvas.renderAll.bind(canvas));
+            sections.front = canvas.toJSON();
+        });
 
-        function changeBackground(color) {
-            var imageUrl = colorImages[color];
-            if (imageUrl) {
-                fabric.Image.fromURL(imageUrl, function(img) {
-                    img.scaleToWidth(canvas.width);
-                    img.scaleToHeight(canvas.height);
-                    canvas.setBackgroundImage(img, canvas.renderAll.bind(canvas));
-                });
+        function switchTab(tab) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelector(`.tab:contains(${tab})`).classList.add('active');
+
+            sections[selectedTab] = canvas.toJSON();
+            canvas.clear();
+
+            selectedTab = tab;
+            if (sections[selectedTab]) {
+                canvas.loadFromJSON(sections[selectedTab], canvas.renderAll.bind(canvas));
             }
         }
 
+        function changeTshirtColor(color) {
+            canvas.setBackgroundColor(color, canvas.renderAll.bind(canvas));
+        }
+
         function addText() {
-            var text = new fabric.IText('Texto de ejemplo', {
+            const text = new fabric.IText('Texto de ejemplo', {
                 left: 50,
                 top: 50,
-                fontSize: 20,
+                fontSize: 24,
                 fill: '#000',
-                fontFamily: 'Arial'
+                borderColor: 'black',
+                cornerColor: 'blue',
+                cornerSize: 8,
+                transparentCorners: false
             });
             canvas.add(text);
         }
 
+        function addImage() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = 'image/*';
+
+            input.onchange = function (event) {
+                const file = event.target.files[0];
+                const reader = new FileReader();
+
+                reader.onload = function (e) {
+                    fabric.Image.fromURL(e.target.result, function (img) {
+                        img.set({
+                            left: 100,
+                            top: 100,
+                        });
+                        canvas.add(img);
+                    });
+                };
+                reader.readAsDataURL(file);
+            };
+
+            input.click();
+        }
+
+        canvas.on('mouse:down', function (e) {
+            const pointer = canvas.getPointer(e.e);
+            const activeObject = canvas.getActiveObject();
+
+            if (activeObject) {
+                // Mostrar menú solo si el objeto es un texto o una imagen
+                if (activeObject.type === 'i-text' || activeObject.type === 'image') {
+                    showContextMenu(pointer);
+                }
+            }
+        });
+
+        canvas.on('selection:cleared', function () {
+            hideContextMenu();
+        });
+
+        function showContextMenu(pointer) {
+            contextMenu.style.display = 'block';
+
+            if (canvas.getActiveObject().type === 'i-text') {
+                document.getElementById('text-toolbar').style.display = 'block';
+                document.getElementById('image-toolbar').style.display = 'none';
+            } else if (canvas.getActiveObject().type === 'image') {
+                document.getElementById('text-toolbar').style.display = 'none';
+                document.getElementById('image-toolbar').style.display = 'block';
+            }
+        }
+
+        function hideContextMenu() {
+            contextMenu.style.display = 'none';
+        }
+
         function updateTextColor() {
-            if (selectedElement && selectedElement.type === 'i-text') {
-                selectedElement.set('fill', document.getElementById('text-color').value);
+            const activeObject = canvas.getActiveObject();
+            if (activeObject && activeObject.type === 'i-text') {
+                activeObject.set('fill', document.getElementById('text-color').value);
                 canvas.renderAll();
             }
         }
 
         function updateTextSize() {
-            if (selectedElement && selectedElement.type === 'i-text') {
-                selectedElement.set('fontSize', parseInt(document.getElementById('text-size').value));
+            const activeObject = canvas.getActiveObject();
+            if (activeObject && activeObject.type === 'i-text') {
+                activeObject.set('fontSize', parseInt(document.getElementById('text-size').value));
                 canvas.renderAll();
             }
         }
 
-        function updateTextFont() {
-            if (selectedElement && selectedElement.type === 'i-text') {
-                selectedElement.set('fontFamily', document.getElementById('text-font').value);
+        function updateTextBorder() {
+            const activeObject = canvas.getActiveObject();
+            if (activeObject && activeObject.type === 'i-text') {
+                activeObject.set('stroke', document.getElementById('text-border').value);
                 canvas.renderAll();
             }
         }
 
-        function openImageUploader() {
-            document.getElementById('image-input').click();
-        }
-
-        function uploadImage() {
-            var input = document.getElementById('image-input');
-            var file = input.files[0];
-            var reader = new FileReader();
-
-            reader.onload = function(e) {
-                var img = new Image();
-                img.onload = function() {
-                    var fabricImg = new fabric.Image(img);
-                    fabricImg.scaleToWidth(canvas.width * 0.7);
-                    canvas.add(fabricImg);
-                };
-                img.src = e.target.result;
-            };
-
-            reader.readAsDataURL(file);
-        }
-
-        function deleteSelectedElement() {
-            if (selectedElement) {
-                canvas.remove(selectedElement);
-                selectedElement = null;
+        function updateImageBorder() {
+            const activeObject = canvas.getActiveObject();
+            if (activeObject && activeObject.type === 'image') {
+                activeObject.set('stroke', document.getElementById('image-border').value);
+                canvas.renderAll();
             }
         }
 
-        function downloadCanvas() {
-            var link = document.createElement('a');
-            link.href = canvas.toDataURL({ format: 'png' });
-            link.download = 'canvas_image.png';
-            link.click();
+        function deleteSelectedObject() {
+            const activeObject = canvas.getActiveObject();
+            if (activeObject) {
+                canvas.remove(activeObject);
+            }
         }
 
-        canvas.on('selection:created', function(event) {
-            selectedElement = event.target;
-        });
-
-        canvas.on('selection:cleared', function() {
-            selectedElement = null;
-        });
-
-        canvas.on('object:modified', function(event) {
-            showDimensions(event.target);
-        });
-
-        function showDimensions(obj) {
-            var ppi = 96; // PPI de referencia
-            var widthCm = obj.getScaledWidth() / ppi * 2.54;
-            var heightCm = obj.getScaledHeight() / ppi * 2.54;
-            document.getElementById('dimensions').innerText = `Dimensiones: ${widthCm.toFixed(2)} cm x ${heightCm.toFixed(2)} cm`;
+        function addSize(size) {
+            alert(`Se seleccionó la talla ${size}`);
         }
     </script>
 </body>
