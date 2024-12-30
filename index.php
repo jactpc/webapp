@@ -232,7 +232,7 @@
 
             // Actualiza la pestaña seleccionada
             selectedTab = tab;
-
+            
             // Restaura el estado del lienzo de la nueva pestaña seleccionada
             if (sections[selectedTab]) {
                 canvases[selectedTab].loadFromJSON(sections[selectedTab], canvases[selectedTab].renderAll.bind(canvases[selectedTab]));
@@ -249,6 +249,7 @@
                     container.style.display = (section === tab) ? 'flex' : 'none';
                 }
             });
+            console.log(selectedTab);
         }
 
 
@@ -267,28 +268,28 @@
         }
 
         function addImage() {
-        const input = document.createElement('input');
-        input.type = 'file';
-        input.accept = 'image/*';
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = 'image/*';
 
-        input.onchange = function (event) {
-            const file = event.target.files[0];
-            const reader = new FileReader();
+            input.onchange = function (event) {
+                const file = event.target.files[0];
+                const reader = new FileReader();
 
-            reader.onload = function (e) {
-                fabric.Image.fromURL(e.target.result, function (img) {
-                    img.set({
-                        left: 100,
-                        top: 100,
+                reader.onload = function (e) {
+                    fabric.Image.fromURL(e.target.result, function (img) {
+                        img.set({
+                            left: 100,
+                            top: 100,
+                        });
+                        canvases[selectedTab].add(img);
                     });
-                    canvases[selectedTab].add(img);
-                });
+                };
+                reader.readAsDataURL(file);
             };
-            reader.readAsDataURL(file);
-        };
 
-        input.click();
-    }
+            input.click();
+        }
 
         function uploadImage() {
             const file = document.getElementById('image-input').files[0];
@@ -305,15 +306,21 @@
             reader.readAsDataURL(file);
         }
 
-        canvases[selectedTab].on('mouse:down', function (e) {
-            const pointer = canvases[selectedTab].getPointer(e.e);
-            const activeObject = canvases[selectedTab].getActiveObject();
+        // Registra el evento para todos los lienzos
+        Object.keys(canvases).forEach((key) => {
+            canvases[key].on('mouse:down', function (e) {
+                if (key === selectedTab) { // Solo ejecutamos el código si el lienzo es el seleccionado
+                    console.log('Evento registrado en:', selectedTab);
+                    const pointer = canvases[key].getPointer(e.e);
+                    const activeObject = canvases[key].getActiveObject();
 
-            if (activeObject) {
-                if (activeObject.type === 'i-text' || activeObject.type === 'image') {
-                    showContextMenu(pointer);
+                    if (activeObject) {
+                        if (activeObject.type === 'i-text' || activeObject.type === 'image') {
+                            showContextMenu(pointer);
+                        }
+                    }
                 }
-            }
+            });
         });
 
         canvases[selectedTab].on('selection:cleared', function () {
