@@ -190,15 +190,15 @@
         let canvases = {
             front: new fabric.Canvas('front-canvas'),
             back: new fabric.Canvas('back-canvas'),
-            leftSleeve: new fabric.Canvas('leftsleeve-canvas'),
-            rightSleeve: new fabric.Canvas('rightsleeve-canvas')
+            leftsleeve: new fabric.Canvas('leftsleeve-canvas'),
+            rightsleeve: new fabric.Canvas('rightsleeve-canvas')
         };
         let selectedTab = 'front';
         let sections = {
             front: null,
             back: null,
-            leftSleeve: null,
-            rightSleeve: null
+            leftsleeve: null,
+            rightsleeve: null
         };
 
         function loadImageForCanvas(section, imageUrl) {
@@ -214,8 +214,8 @@
 
         loadImageForCanvas('front', 'img/1.front.black.jpg');
         loadImageForCanvas('back', 'img/1.back.black.jpg');
-        loadImageForCanvas('leftSleeve', 'img/1.leftsleeve.black.jpg');
-        loadImageForCanvas('rightSleeve', 'img/1.rightsleeve.black.jpg');
+        loadImageForCanvas('leftsleeve', 'img/1.leftsleeve.black.jpg');
+        loadImageForCanvas('rightsleeve', 'img/1.rightsleeve.black.jpg');
 
         function switchTab(tab) {
             // Verifica que tab tenga un valor válido
@@ -246,20 +246,49 @@
             Object.keys(canvases).forEach(section => {
                 const container = document.getElementById(`${section}-canvas-container`);
                 if (container) {
-                    container.style.display = (section === tab) ? 'block' : 'none';
+                    container.style.display = (section === tab) ? 'flex' : 'none';
                 }
             });
         }
 
 
         function addText() {
-            const text = new fabric.Text('Texto', { left: 50, top: 50, fontSize: 30 });
+            const text = new fabric.IText('Texto de ejemplo', {
+                left: 50,
+                top: 50,
+                fontSize: 24,
+                fill: '#000',
+                borderColor: 'black',
+                cornerColor: 'blue',
+                cornerSize: 8,
+                transparentCorners: false
+            });
             canvases[selectedTab].add(text);
         }
 
         function addImage() {
-            document.getElementById('image-input').click();
-        }
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = 'image/*';
+
+        input.onchange = function (event) {
+            const file = event.target.files[0];
+            const reader = new FileReader();
+
+            reader.onload = function (e) {
+                fabric.Image.fromURL(e.target.result, function (img) {
+                    img.set({
+                        left: 100,
+                        top: 100,
+                    });
+                    canvases[selectedTab].add(img);
+                });
+            };
+            reader.readAsDataURL(file);
+        };
+
+        input.click();
+    }
 
         function uploadImage() {
             const file = document.getElementById('image-input').files[0];
@@ -345,7 +374,9 @@
                 canvases[selectedTab].remove(activeObject);
             }
         }
-
+        function addSize(size) {
+            console.log(`Se seleccionó la talla ${size}`);
+        }
     </script>
 </body>
 </html>
