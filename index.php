@@ -31,9 +31,8 @@
         }
 
         .color-button {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
+            width: 20px;
+            height: 20px;
         }
 
         .color-black { background-color: black; }
@@ -76,6 +75,7 @@
             width: 100%;
             max-width: 500px;
             height: 600px;
+            margin-bottom: 20px;
         }
 
         canvas {
@@ -132,21 +132,30 @@
         <div class="size-button" onclick="addSize('M')">M</div>
         <div class="size-button" onclick="addSize('L')">L</div>
         <div class="size-button" onclick="addSize('XL')">XL</div>
-        <div class="size-button" onclick="addSize('XXL')">XXL</div>
+        <div class="size-button" onclick="addSize('XXL')">2XL</div>
     </div>
 
     <div class="tabs">
-        <div class="tab active" onclick="switchTab('front')">Pecho</div>
-        <div class="tab" onclick="switchTab('back')">Espalda</div>
-        <div class="tab" onclick="switchTab('left-sleeve')">Manga Izquierda</div>
-        <div class="tab" onclick="switchTab('right-sleeve')">Manga Derecha</div>
+        <div class="tab active" data-tab="front" onclick="switchTab('front')">Pecho</div>
+        <div class="tab" data-tab="back" onclick="switchTab('back')">Espalda</div>
+        <div class="tab" data-tab="leftsleeve" onclick="switchTab('leftsleeve')">Manga Izquierda</div>
+        <div class="tab" data-tab="rightsleeve" onclick="switchTab('rightsleeve')">Manga Derecha</div>
     </div>
 
-    <div class="canvas-container">
-        <canvas id="tshirt-canvas" width="400" height="500"></canvas>
+    <div class="canvas-container" id="front-canvas-container">
+        <canvas id="front-canvas" width="400" height="500"></canvas>
+    </div>
+    <div class="canvas-container" id="back-canvas-container" style="display:none;">
+        <canvas id="back-canvas" width="400" height="500"></canvas>
+    </div>
+    <div class="canvas-container" id="leftsleeve-canvas-container" style="display:none;">
+        <canvas id="leftsleeve-canvas" width="400" height="500"></canvas>
+    </div>
+    <div class="canvas-container" id="rightsleeve-canvas-container" style="display:none;">
+        <canvas id="rightsleeve-canvas" width="400" height="500"></canvas>
     </div>
 
-    <div id="context-menu" class="context-menu" style="display:none; position: absolute;">
+    <div id="context-menu" class="context-menu" style="display:none;">
         <div class="toolbar" id="text-toolbar">
             <label for="text-color">Color de Texto:</label>
             <input type="color" id="text-color" onchange="updateTextColor()">
@@ -156,6 +165,8 @@
 
             <label for="text-border">Borde:</label>
             <input type="color" id="text-border" onchange="updateTextBorder()">
+
+            <button onclick="deleteSelectedObject()">Eliminar</button>
         </div>
 
         <div class="toolbar" id="image-toolbar">
@@ -176,7 +187,12 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/4.5.0/fabric.min.js"></script>
     <script>
         const contextMenu = document.getElementById('context-menu');
-        let canvas = new fabric.Canvas('tshirt-canvas');
+        let canvases = {
+            front: new fabric.Canvas('front-canvas'),
+            back: new fabric.Canvas('back-canvas'),
+            leftSleeve: new fabric.Canvas('leftsleeve-canvas'),
+            rightSleeve: new fabric.Canvas('rightsleeve-canvas')
+        };
         let selectedTab = 'front';
         let sections = {
             front: null,
@@ -185,93 +201,103 @@
             rightSleeve: null
         };
 
-        fabric.Image.fromURL('https://via.placeholder.com/400x500?text=Camiseta+Negra', function(img) {
-            img.selectable = false;
-            img.evented = false;
-            img.scaleToWidth(canvas.width);
-            img.scaleToHeight(canvas.height);
-            canvas.setBackgroundImage(img, canvas.renderAll.bind(canvas));
-            sections.front = canvas.toJSON();
-        });
+        function loadImageForCanvas(section, imageUrl) {
+            fabric.Image.fromURL(imageUrl, function(img) {
+                img.selectable = false;
+                img.evented = false;
+                img.scaleToWidth(canvases[section].width);
+                img.scaleToHeight(canvases[section].height);
+                canvases[section].setBackgroundImage(img, canvases[section].renderAll.bind(canvases[section]));
+                sections[section] = canvases[section].toJSON();
+            });
+        }
+
+        loadImageForCanvas('front', 'img/1.front.black.jpg');
+        loadImageForCanvas('back', 'img/1.back.black.jpg');
+        loadImageForCanvas('leftSleeve', 'img/1.leftsleeve.black.jpg');
+        loadImageForCanvas('rightSleeve', 'img/1.rightsleeve.black.jpg');
 
         function switchTab(tab) {
-            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-            document.querySelector(`.tab:contains(${tab})`).classList.add('active');
-
-            sections[selectedTab] = canvas.toJSON();
-            canvas.clear();
-
-            selectedTab = tab;
-            if (sections[selectedTab]) {
-                canvas.loadFromJSON(sections[selectedTab], canvas.renderAll.bind(canvas));
+            // Verifica que tab tenga un valor válido
+            if (!tab || !Object.keys(canvases).includes(tab)) {
+                console.error('Pestaña no válida:', tab);
+                return;
             }
+
+            // Guardar el estado del lienzo actual antes de cambiar
+            if (canvases[selectedTab]) {
+                sections[selectedTab] = canvases[selectedTab].toJSON();
+                canvases[selectedTab].clear();
+            }
+
+            // Actualiza la pestaña seleccionada
+            selectedTab = tab;
+
+            // Restaura el estado del lienzo de la nueva pestaña seleccionada
+            if (sections[selectedTab]) {
+                canvases[selectedTab].loadFromJSON(sections[selectedTab], canvases[selectedTab].renderAll.bind(canvases[selectedTab]));
+            }
+
+            // Actualiza las pestañas en la interfaz
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelector(`.tab[data-tab="${tab}"]`).classList.add('active');
+
+            // Muestra solo el contenedor correspondiente al lienzo activo
+            Object.keys(canvases).forEach(section => {
+                const container = document.getElementById(`${section}-canvas-container`);
+                if (container) {
+                    container.style.display = (section === tab) ? 'block' : 'none';
+                }
+            });
         }
 
-        function changeTshirtColor(color) {
-            canvas.setBackgroundColor(color, canvas.renderAll.bind(canvas));
-        }
 
         function addText() {
-            const text = new fabric.IText('Texto de ejemplo', {
-                left: 50,
-                top: 50,
-                fontSize: 24,
-                fill: '#000',
-                borderColor: 'black',
-                cornerColor: 'blue',
-                cornerSize: 8,
-                transparentCorners: false
-            });
-            canvas.add(text);
+            const text = new fabric.Text('Texto', { left: 50, top: 50, fontSize: 30 });
+            canvases[selectedTab].add(text);
         }
 
         function addImage() {
-            const input = document.createElement('input');
-            input.type = 'file';
-            input.accept = 'image/*';
-
-            input.onchange = function (event) {
-                const file = event.target.files[0];
-                const reader = new FileReader();
-
-                reader.onload = function (e) {
-                    fabric.Image.fromURL(e.target.result, function (img) {
-                        img.set({
-                            left: 100,
-                            top: 100,
-                        });
-                        canvas.add(img);
-                    });
-                };
-                reader.readAsDataURL(file);
-            };
-
-            input.click();
+            document.getElementById('image-input').click();
         }
 
-        canvas.on('mouse:down', function (e) {
-            const pointer = canvas.getPointer(e.e);
-            const activeObject = canvas.getActiveObject();
+        function uploadImage() {
+            const file = document.getElementById('image-input').files[0];
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const imgElement = new Image();
+                imgElement.src = e.target.result;
+                imgElement.onload = function() {
+                    const img = new fabric.Image(imgElement);
+                    img.set({ left: 50, top: 50 });
+                    canvases[selectedTab].add(img);
+                };
+            };
+            reader.readAsDataURL(file);
+        }
+
+        canvases[selectedTab].on('mouse:down', function (e) {
+            const pointer = canvases[selectedTab].getPointer(e.e);
+            const activeObject = canvases[selectedTab].getActiveObject();
 
             if (activeObject) {
-                // Mostrar menú solo si el objeto es un texto o una imagen
                 if (activeObject.type === 'i-text' || activeObject.type === 'image') {
                     showContextMenu(pointer);
                 }
             }
         });
 
-        canvas.on('selection:cleared', function () {
+        canvases[selectedTab].on('selection:cleared', function () {
             hideContextMenu();
         });
 
         function showContextMenu(pointer) {
             contextMenu.style.display = 'block';
 
-            if (canvas.getActiveObject().type === 'i-text') {
+            if (canvases[selectedTab].getActiveObject().type === 'i-text') {
                 document.getElementById('text-toolbar').style.display = 'block';
                 document.getElementById('image-toolbar').style.display = 'none';
-            } else if (canvas.getActiveObject().type === 'image') {
+            } else if (canvases[selectedTab].getActiveObject().type === 'image') {
                 document.getElementById('text-toolbar').style.display = 'none';
                 document.getElementById('image-toolbar').style.display = 'block';
             }
@@ -282,47 +308,44 @@
         }
 
         function updateTextColor() {
-            const activeObject = canvas.getActiveObject();
+            const activeObject = canvases[selectedTab].getActiveObject();
             if (activeObject && activeObject.type === 'i-text') {
                 activeObject.set('fill', document.getElementById('text-color').value);
-                canvas.renderAll();
+                canvases[selectedTab].renderAll();
             }
         }
 
         function updateTextSize() {
-            const activeObject = canvas.getActiveObject();
+            const activeObject = canvases[selectedTab].getActiveObject();
             if (activeObject && activeObject.type === 'i-text') {
                 activeObject.set('fontSize', parseInt(document.getElementById('text-size').value));
-                canvas.renderAll();
+                canvases[selectedTab].renderAll();
             }
         }
 
         function updateTextBorder() {
-            const activeObject = canvas.getActiveObject();
+            const activeObject = canvases[selectedTab].getActiveObject();
             if (activeObject && activeObject.type === 'i-text') {
                 activeObject.set('stroke', document.getElementById('text-border').value);
-                canvas.renderAll();
+                canvases[selectedTab].renderAll();
             }
         }
 
         function updateImageBorder() {
-            const activeObject = canvas.getActiveObject();
+            const activeObject = canvases[selectedTab].getActiveObject();
             if (activeObject && activeObject.type === 'image') {
                 activeObject.set('stroke', document.getElementById('image-border').value);
-                canvas.renderAll();
+                canvases[selectedTab].renderAll();
             }
         }
 
         function deleteSelectedObject() {
-            const activeObject = canvas.getActiveObject();
+            const activeObject = canvases[selectedTab].getActiveObject();
             if (activeObject) {
-                canvas.remove(activeObject);
+                canvases[selectedTab].remove(activeObject);
             }
         }
 
-        function addSize(size) {
-            alert(`Se seleccionó la talla ${size}`);
-        }
     </script>
 </body>
 </html>
