@@ -43,13 +43,23 @@
 
         .size-button { background-color: #fff; }
 
-        .tabs {
+        .tabs{
             display: flex;
             justify-content: center;
             margin: 10px 0;
         }
-
-        .tab {
+        .controls{
+            position: fixed;
+            bottom: 0px;
+            padding: 10px 20px;
+            cursor: pointer;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background-color: #fff;
+            margin: 0 5px;
+            transition: background-color 0.3s ease;
+        }
+        .tab, .controlsbtn{
             padding: 10px 20px;
             cursor: pointer;
             border: 1px solid #ddd;
@@ -89,9 +99,11 @@
             gap: 10px;
             margin: 10px 0;
         }
-
+        .context-menu button.dlt{
+            background-color:rgb(255, 0, 0);
+        }
         .context-menu button {
-            background-color: #007BFF;
+            
             border: none;
             border-radius: 5px;
             padding: 10px;
@@ -106,7 +118,6 @@
         }
 
         .context-menu input, .context-menu select {
-            padding: 5px;
             border: 1px solid #ddd;
             border-radius: 5px;
         }
@@ -155,6 +166,7 @@
         <canvas id="rightsleeve-canvas" width="400" height="500"></canvas>
     </div>
 
+    <div class="controls">
     <div id="context-menu" class="context-menu" style="display:none;">
         <div class="toolbar" id="text-toolbar">
             <label for="text-color">Color de Texto:</label>
@@ -166,7 +178,7 @@
             <label for="text-border">Borde:</label>
             <input type="color" id="text-border" onchange="updateTextBorder()">
 
-            <button onclick="deleteSelectedObject()">Eliminar</button>
+            <button class="dlt"onclick="deleteSelectedObject()">Eliminar</button>
         </div>
 
         <div class="toolbar" id="image-toolbar">
@@ -177,9 +189,8 @@
         </div>
     </div>
 
-    <div class="controls">
-        <button class="button" onclick="addText()">Agregar Texto</button>
-        <button class="button" onclick="addImage()">Agregar Imagen</button>
+        <button class="button controlsbtn" onclick="addText()">Agregar Texto</button>
+        <button class="button controlsbtn" onclick="addImage()">Agregar Imagen</button>
     </div>
 
     <input type="file" id="image-input" style="display: none;" accept="image/*" onchange="uploadImage()">
@@ -252,9 +263,16 @@
             console.log(selectedTab);
         }
 
+        function changeTshirtColor(color) {
+    Object.keys(canvases).forEach(section => {
+        const imageUrl = `img/1.${section}.${color}.jpg`;
+        loadImageForCanvas(section, imageUrl);
+        console.log(`Cargando imagen para ${section}: ${imageUrl}`);
+    });
+}
 
         function addText() {
-            const text = new fabric.IText('Texto de ejemplo', {
+            const text = new fabric.IText('Texto', {
                 left: 50,
                 top: 50,
                 fontSize: 24,
@@ -323,8 +341,13 @@
             });
         });
 
-        canvases[selectedTab].on('selection:cleared', function () {
-            hideContextMenu();
+        // Registra el evento 'selection:cleared' en todos los lienzos
+        Object.keys(canvases).forEach((key) => {
+            canvases[key].on('selection:cleared', function () {
+                if (key === selectedTab) { // Solo ocultamos el menú si la pestaña es la seleccionada
+                    hideContextMenu();
+                }
+            });
         });
 
         function showContextMenu(pointer) {
