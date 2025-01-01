@@ -125,6 +125,40 @@
         .context-menu label {
             font-size: 14px;
         }
+
+        .mini-map-container {
+    position: absolute;
+    bottom: 10px;
+    right: 10px;
+    border: 2px solid #ddd;
+    background-color: rgba(255, 255, 255, 0.8);
+    width: 150px;
+    height: 200px;
+    overflow: hidden;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+}
+
+.mini-map-container canvas {
+    display: block;
+    max-width: 100%;
+    max-height: 100%;
+}
+.zoom-controls {
+    position: absolute;
+    bottom: 10px;
+    left: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.zoom-controls button {
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    cursor: pointer;
+    background-color: #fff;
+}
     </style>
 </head>
 <body>
@@ -165,30 +199,36 @@
     <div class="canvas-container" id="rightsleeve-canvas-container" style="display:none;">
         <canvas id="rightsleeve-canvas" width="400" height="500"></canvas>
     </div>
-
-    <div class="controls">
-    <div id="context-menu" class="context-menu" style="display:none;">
-        <div class="toolbar" id="text-toolbar">
-            <label for="text-color">Color de Texto:</label>
-            <input type="color" id="text-color" onchange="updateTextColor()">
-
-            <label for="text-size">Tamaño:</label>
-            <input type="number" id="text-size" value="20" min="10" max="100" onchange="updateTextSize()">
-
-            <label for="text-border">Borde:</label>
-            <input type="color" id="text-border" onchange="updateTextBorder()">
-
-            <button class="dlt"onclick="deleteSelectedObject()">Eliminar</button>
-        </div>
-
-        <div class="toolbar" id="image-toolbar">
-            <label for="image-border">Borde:</label>
-            <input type="color" id="image-border" onchange="updateImageBorder()">
-
-            <button onclick="deleteSelectedObject()">Eliminar</button>
-        </div>
+    <div class="zoom-controls">
+        <button id="zoom-in" onclick="zoomIn()">+</button>
+        <button id="zoom-out" onclick="zoomOut()">-</button>
+    </div>
+    <div class="mini-map-container">
+        <canvas id="mini-map" width="150" height="200"></canvas>
     </div>
 
+    <div class="controls">
+        <div id="context-menu" class="context-menu" style="display:none;">
+            <div class="toolbar" id="text-toolbar">
+                <label for="text-color">Color de Texto:</label>
+                <input type="color" id="text-color" oninput="updateTextColor()">
+
+                <label for="text-size">Tamaño:</label>
+                <input type="number" id="text-size" value="20" min="10" max="100" onchange="updateTextSize()">
+
+                <label for="text-border">Borde:</label>
+                <input type="color" id="text-border" oninput="updateTextBorder()">
+
+                <button class="dlt"onclick="deleteSelectedObject()">Eliminar</button>
+            </div>
+
+            <div class="toolbar" id="image-toolbar">
+                <label for="image-border">Borde:</label>
+                <input type="color" id="image-border" oninput="updateImageBorder()">
+
+                <button onclick="deleteSelectedObject()">Eliminar</button>
+            </div>
+        </div>
         <button class="button controlsbtn" onclick="addText()">Agregar Texto</button>
         <button class="button controlsbtn" onclick="addImage()">Agregar Imagen</button>
     </div>
@@ -264,12 +304,12 @@
         }
 
         function changeTshirtColor(color) {
-    Object.keys(canvases).forEach(section => {
-        const imageUrl = `img/1.${section}.${color}.jpg`;
-        loadImageForCanvas(section, imageUrl);
-        console.log(`Cargando imagen para ${section}: ${imageUrl}`);
-    });
-}
+            Object.keys(canvases).forEach(section => {
+                const imageUrl = `img/1.${section}.${color}.jpg`;
+                loadImageForCanvas(section, imageUrl);
+                console.log(`Cargando imagen para ${section}: ${imageUrl}`);
+            });
+        }
 
         function addText() {
             const text = new fabric.IText('Texto', {
@@ -280,7 +320,7 @@
                 borderColor: 'black',
                 cornerColor: 'blue',
                 cornerSize: 8,
-                transparentCorners: false
+                transparentCorners: false,
             });
             canvases[selectedTab].add(text);
         }
@@ -407,6 +447,80 @@
         function addSize(size) {
             console.log(`Se seleccionó la talla ${size}`);
         }
+
+const miniMapCanvas = new fabric.Canvas('mini-map',  { containerClass: 'mini-map', selection: false });
+// Escala del mini mapa
+const miniMapScale = 0.25;
+
+function updateMiniMap() {
+    const mainCanvas = canvases[selectedTab];
+
+    // Limpiar el mini mapa
+    miniMapCanvas.clear();
+
+    // Copiar los objetos del lienzo principal al mini mapa
+    mainCanvas.getObjects().forEach((obj) => {
+        const clone = fabric.util.object.clone(obj);
+        clone.set({
+            scaleX: obj.scaleX * miniMapScale,
+            scaleY: obj.scaleY * miniMapScale,
+            left: obj.left * miniMapScale,
+            top: obj.top * miniMapScale
+        });
+        miniMapCanvas.add(clone);
+    });
+
+    // Establecer el fondo del mini mapa (si corresponde)
+    if (mainCanvas.backgroundImage) {
+        mainCanvas.backgroundImage.clone((bg) => {
+            bg.scaleX = mainCanvas.backgroundImage.scaleX * miniMapScale;
+            bg.scaleY = mainCanvas.backgroundImage.scaleY * miniMapScale;
+            miniMapCanvas.setBackgroundImage(bg, miniMapCanvas.renderAll.bind(miniMapCanvas));
+        });
+    } else {
+        miniMapCanvas.renderAll();
+    }
+}
+
+// Actualizar el mini mapa cuando el lienzo principal cambie
+Object.keys(canvases).forEach((key) => {
+    canvases[key].on('object:modified', updateMiniMap);
+    canvases[key].on('object:added', updateMiniMap);
+    canvases[key].on('object:removed', updateMiniMap);
+    canvases[key].on('after:render', updateMiniMap); // Sincronización completa
+});
+
+miniMapCanvas.on('mouse:down', function (e) {
+    const mainCanvas = canvases[selectedTab];
+    const pointer = miniMapCanvas.getPointer(e.e);
+
+    // Calcular la proporción entre el mini mapa y el lienzo principal
+    const scale = 1 / miniMapScale;
+
+    // Calcular la nueva posición del viewport en el lienzo principal
+    const centerX = pointer.x * scale - mainCanvas.width / 2;
+    const centerY = pointer.y * scale - mainCanvas.height / 2;
+
+    // Ajustar el viewportTransform para que la vista principal se mueva al lugar correcto
+    const transform = mainCanvas.viewportTransform;
+    transform[4] = -centerX;
+    transform[5] = -centerY;
+
+    mainCanvas.setViewportTransform(transform);
+    mainCanvas.renderAll(); // Volver a renderizar el lienzo principal
+});
+
+function zoomIn() {
+    const canvas = canvases[selectedTab];
+    canvas.setZoom(canvas.getZoom() * 1.2);
+}
+
+function zoomOut() {
+    const canvas = canvases[selectedTab];
+    canvas.setZoom(canvas.getZoom() / 1.2);
+}
+
+
     </script>
 </body>
 </html>
