@@ -448,79 +448,90 @@
             console.log(`Se seleccionó la talla ${size}`);
         }
 
-const miniMapCanvas = new fabric.Canvas('mini-map',  { containerClass: 'mini-map', selection: false });
-// Escala del mini mapa
-const miniMapScale = 0.25;
+        const miniMapCanvas = new fabric.Canvas('mini-map');
 
-function updateMiniMap() {
-    const mainCanvas = canvases[selectedTab];
+        // Escala del mini mapa
+        const miniMapScale = 0.25;
 
-    // Limpiar el mini mapa
-    miniMapCanvas.clear();
+        function updateMiniMap() {
+            const mainCanvas = canvases[selectedTab];
 
-    // Copiar los objetos del lienzo principal al mini mapa
-    mainCanvas.getObjects().forEach((obj) => {
-        const clone = fabric.util.object.clone(obj);
-        clone.set({
-            scaleX: obj.scaleX * miniMapScale,
-            scaleY: obj.scaleY * miniMapScale,
-            left: obj.left * miniMapScale,
-            top: obj.top * miniMapScale
+            // Limpiar el mini mapa
+            miniMapCanvas.clear();
+
+            mainCanvas.getObjects().forEach((obj) => {
+                // Clonar el objeto usando el método `clone`
+                obj.clone((clone) => {
+                    // Ajustar escala solo para el mini mapa, pero mantener fuente para textos
+                    if (clone.type === 'i-text') {
+                        clone.set({
+                            fontSize: obj.fontSize * miniMapScale, // Escalar el tamaño de la fuente
+                            left: obj.left * miniMapScale,
+                            top: obj.top * miniMapScale,
+                        });
+                    } else {
+                        clone.set({
+                            scaleX: obj.scaleX * miniMapScale,
+                            scaleY: obj.scaleY * miniMapScale,
+                            left: obj.left * miniMapScale,
+                            top: obj.top * miniMapScale,
+                        });
+                    }
+
+                    miniMapCanvas.add(clone);
+                });
+            });
+
+            // Establecer el fondo del mini mapa (si corresponde)
+            if (mainCanvas.backgroundImage) {
+                mainCanvas.backgroundImage.clone((bg) => {
+                    bg.scaleX = mainCanvas.backgroundImage.scaleX * miniMapScale;
+                    bg.scaleY = mainCanvas.backgroundImage.scaleY * miniMapScale;
+                    miniMapCanvas.setBackgroundImage(bg, miniMapCanvas.renderAll.bind(miniMapCanvas));
+                });
+            } else {
+                miniMapCanvas.renderAll();
+            }
+        }
+
+        // Actualizar el mini mapa cuando el lienzo principal cambie
+        Object.keys(canvases).forEach((key) => {
+            canvases[key].on('object:modified', updateMiniMap);
+            canvases[key].on('object:added', updateMiniMap);
+            canvases[key].on('object:removed', updateMiniMap);
+            canvases[key].on('after:render', updateMiniMap); // Sincronización completa
         });
-        miniMapCanvas.add(clone);
-    });
 
-    // Establecer el fondo del mini mapa (si corresponde)
-    if (mainCanvas.backgroundImage) {
-        mainCanvas.backgroundImage.clone((bg) => {
-            bg.scaleX = mainCanvas.backgroundImage.scaleX * miniMapScale;
-            bg.scaleY = mainCanvas.backgroundImage.scaleY * miniMapScale;
-            miniMapCanvas.setBackgroundImage(bg, miniMapCanvas.renderAll.bind(miniMapCanvas));
+        miniMapCanvas.on('mouse:down', function (e) {
+            const mainCanvas = canvases[selectedTab];
+            const pointer = miniMapCanvas.getPointer(e.e);
+
+            // Calcular la proporción entre el mini mapa y el lienzo principal
+            const scale = 1 / miniMapScale;
+
+            // Calcular la nueva posición del viewport en el lienzo principal
+            const centerX = pointer.x * scale - mainCanvas.width / 2;
+            const centerY = pointer.y * scale - mainCanvas.height / 2;
+
+            // Ajustar el viewportTransform para que la vista principal se mueva al lugar correcto
+            const transform = mainCanvas.viewportTransform;
+            transform[4] = -centerX;
+            transform[5] = -centerY;
+
+            // Evitar que la escala de los objetos se vea afectada globalmente
+            mainCanvas.setViewportTransform(transform);
+            mainCanvas.renderAll(); // Volver a renderizar el lienzo principal
         });
-    } else {
-        miniMapCanvas.renderAll();
-    }
-}
 
-// Actualizar el mini mapa cuando el lienzo principal cambie
-Object.keys(canvases).forEach((key) => {
-    canvases[key].on('object:modified', updateMiniMap);
-    canvases[key].on('object:added', updateMiniMap);
-    canvases[key].on('object:removed', updateMiniMap);
-    canvases[key].on('after:render', updateMiniMap); // Sincronización completa
-});
+        function zoomIn() {
+            const canvas = canvases[selectedTab];
+            canvas.setZoom(canvas.getZoom() * 1.2);
+        }
 
-miniMapCanvas.on('mouse:down', function (e) {
-    const mainCanvas = canvases[selectedTab];
-    const pointer = miniMapCanvas.getPointer(e.e);
-
-    // Calcular la proporción entre el mini mapa y el lienzo principal
-    const scale = 1 / miniMapScale;
-
-    // Calcular la nueva posición del viewport en el lienzo principal
-    const centerX = pointer.x * scale - mainCanvas.width / 2;
-    const centerY = pointer.y * scale - mainCanvas.height / 2;
-
-    // Ajustar el viewportTransform para que la vista principal se mueva al lugar correcto
-    const transform = mainCanvas.viewportTransform;
-    transform[4] = -centerX;
-    transform[5] = -centerY;
-
-    mainCanvas.setViewportTransform(transform);
-    mainCanvas.renderAll(); // Volver a renderizar el lienzo principal
-});
-
-function zoomIn() {
-    const canvas = canvases[selectedTab];
-    canvas.setZoom(canvas.getZoom() * 1.2);
-}
-
-function zoomOut() {
-    const canvas = canvases[selectedTab];
-    canvas.setZoom(canvas.getZoom() / 1.2);
-}
-
-
+        function zoomOut() {
+            const canvas = canvases[selectedTab];
+            canvas.setZoom(canvas.getZoom() / 1.2);
+        }
     </script>
 </body>
 </html>
