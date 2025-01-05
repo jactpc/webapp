@@ -19,6 +19,8 @@
             display: flex;
             gap: 10px;
             margin: 10px 0;
+            flex-wrap: wrap;
+            justify-content: center;
         }
 
         .color-button, .size-button {
@@ -31,8 +33,8 @@
         }
 
         .color-button {
-            width: 20px;
-            height: 20px;
+            width: 30px;
+            height: 30px;
         }
 
         .color-black { background-color: black; }
@@ -41,23 +43,29 @@
         .color-red { background-color: red; }
         .color-blue { background-color: blue; }
 
-        .size-button { background-color: #fff; }
+        .size-button {
+            background-color: #fff;
+            min-width: 20px;
+            text-align: center;
+        }
 
-        .tabs{
+        .tabs {
             display: flex;
             justify-content: center;
             margin: 10px 0;
+            flex-wrap: wrap;
+            gap: 10px;
         }
-        .controls{
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 10px;
+            padding: 10px;
             position: fixed;
-            bottom: 0px;
-            padding: 10px 20px;
-            cursor: pointer;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            background-color: #fff;
-            margin: 0 5px;
-            transition: background-color 0.3s ease;
+            bottom: 10px;
+            width: 100%;
+            background-color: rgba(255, 255, 255, 0.9);
         }
         .tab, .controlsbtn{
             padding: 10px 20px;
@@ -83,8 +91,8 @@
             border: 1px solid #ddd;
             border-radius: 10px;
             width: 100%;
-            max-width: 500px;
-            height: 600px;
+            max-width: 600px;
+            height: 700px;
             margin-bottom: 20px;
         }
 
@@ -127,38 +135,81 @@
         }
 
         .mini-map-container {
-    position: absolute;
-    bottom: 10px;
-    right: 10px;
-    border: 2px solid #ddd;
-    background-color: rgba(255, 255, 255, 0.8);
-    width: 150px;
-    height: 200px;
-    overflow: hidden;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
-}
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            width: 20vw;
+            max-width: 150px;
+            height: 25vw;
+            max-height: 200px;
+            border: 2px solid #ddd;
+            background-color: rgba(255, 255, 255, 0.8);
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+        }
 
-.mini-map-container canvas {
-    display: block;
-    max-width: 100%;
-    max-height: 100%;
-}
-.zoom-controls {
-    position: absolute;
-    bottom: 10px;
-    left: 10px;
-    display: flex;
-    flex-direction: column;
-    gap: 5px;
-}
+        .mini-map-container canvas {
+            display: block;
+            max-width: 100%;
+            max-height: 100%;
+        }
+        .zoom-controls {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
 
-.zoom-controls button {
-    padding: 10px;
-    border: 1px solid #ddd;
-    border-radius: 5px;
-    cursor: pointer;
-    background-color: #fff;
-}
+        .zoom-controls button {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            cursor: pointer;
+            background-color: #fff;
+        }
+        /* Media queries para pantallas pequeñas */
+        @media (max-width: 768px) {
+            .canvas-container {
+                width: 100%;
+
+            }
+
+            .color-buttons, .size-buttons, .tabs {
+                gap: 5px;
+            }
+
+            .color-button {
+                width: 25px;
+                height: 25px;
+            }
+
+            .size-button {
+                font-size: 12px;
+                padding: 5px;
+            }
+
+            .tab {
+                font-size: 12px;
+                padding: 8px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .canvas-container {
+                height: 50vw;
+            }
+
+            .zoom-controls {
+                bottom: 5px;
+                left: 5px;
+            }
+
+            .mini-map-container {
+                width: 100px;
+                height: 150px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -188,16 +239,16 @@
     </div>
 
     <div class="canvas-container" id="front-canvas-container">
-        <canvas id="front-canvas" width="400" height="500"></canvas>
+        <canvas id="front-canvas" width="550" height="650"></canvas>
     </div>
     <div class="canvas-container" id="back-canvas-container" style="display:none;">
-        <canvas id="back-canvas" width="400" height="500"></canvas>
+        <canvas id="back-canvas" width="550" height="650"></canvas>
     </div>
     <div class="canvas-container" id="leftsleeve-canvas-container" style="display:none;">
-        <canvas id="leftsleeve-canvas" width="400" height="500"></canvas>
+        <canvas id="leftsleeve-canvas" width="550" height="650"></canvas>
     </div>
     <div class="canvas-container" id="rightsleeve-canvas-container" style="display:none;">
-        <canvas id="rightsleeve-canvas" width="400" height="500"></canvas>
+        <canvas id="rightsleeve-canvas" width="550" height="650"></canvas>
     </div>
     <div class="zoom-controls">
         <button id="zoom-in" onclick="zoomIn()">+</button>
@@ -335,18 +386,64 @@
                 const reader = new FileReader();
 
                 reader.onload = function (e) {
-                    fabric.Image.fromURL(e.target.result, function (img) {
+                    const imgElement = new Image();
+                    imgElement.src = e.target.result;
+                    imgElement.onload = function() {
+                        // Obtiene las dimensiones originales de la imagen
+                        const imgWidth = imgElement.width;
+                        const imgHeight = imgElement.height;
+
+                        // Obtiene el tamaño del lienzo
+                        const canvasWidth = canvases[selectedTab].width;
+                        const canvasHeight = canvases[selectedTab].height;
+
+                        // Calcula el porcentaje de la imagen con respecto al tamaño del lienzo
+                        const scaleX = canvasWidth * 0.6 / imgWidth;  // Escala basada en el ancho
+                        const scaleY = canvasHeight * 0.6 / imgHeight; // Escala basada en la altura
+
+                        // Selecciona el factor de escala más pequeño para que la imagen no exceda el 70% del tamaño del lienzo
+                        const scaleFactor = Math.min(scaleX, scaleY);
+
+                        // Aplica la escala y añade la imagen al lienzo
+                        const img = new fabric.Image(imgElement);
                         img.set({
-                            left: 100,
-                            top: 100,
+                            left: 50,
+                            top: 50,
+                            scaleX: scaleFactor,
+                            scaleY: scaleFactor,
                         });
                         canvases[selectedTab].add(img);
-                    });
+
+                        // Sube la imagen al servidor
+                        uploadImageToServer(file);
+                    };
                 };
                 reader.readAsDataURL(file);
             };
 
             input.click();
+        }
+
+        function uploadImageToServer(file) {
+            const formData = new FormData();
+            formData.append('image', file);
+
+            // Enviar la imagen al servidor
+            fetch('upload_img.php', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    console.log('Imagen cargada con éxito:', data.filePath);
+                } else {
+                    console.error('Error al cargar la imagen:', data.error);
+                }
+            })
+            .catch(error => {
+                console.error('Error en la carga de la imagen:', error);
+            });
         }
 
         function uploadImage() {
