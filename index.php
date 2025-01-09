@@ -7,15 +7,29 @@
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <div class="color-buttons">
-        <div class="color-button color-black" onclick="changeTshirtColor('black')"></div>
-        <div class="color-button color-white" onclick="changeTshirtColor('white')"></div>
-        <div class="color-button color-gray" onclick="changeTshirtColor('gray')"></div>
-        <div class="color-button color-red" onclick="changeTshirtColor('red')"></div>
-        <div class="color-button color-blue" onclick="changeTshirtColor('blue')"></div>
+    <!-- Hero Section -->
+    <div class="hero">
+        <h1>Diseña tu Camiseta Personalizada</h1>
+        <p>Elige colores, tamaños y añade tus propios diseños. ¡Crea algo único!</p>
+        <button onclick="scrollToFeatures()">Comenzar</button>
     </div>
-
-    <div class="size-buttons">
+    <!-- Features Section -->
+    <div class="features" id="features">
+        <div class="feature-card">
+            <h3>Variedad de Colores</h3>
+            <p>Escoge entre una amplia gama de colores para tu camiseta.</p>
+            <div class="color-buttons">
+                <div class="color-button color-black" onclick="changeTshirtColor('black')"></div>
+                <div class="color-button color-white" onclick="changeTshirtColor('white')"></div>
+                <div class="color-button color-gray" onclick="changeTshirtColor('gray')"></div>
+                <div class="color-button color-red" onclick="changeTshirtColor('red')"></div>
+                <div class="color-button color-blue" onclick="changeTshirtColor('blue')"></div>
+            </div>
+        </div>
+        <div class="feature-card">
+            <h3>Diversidad de Tamaños</h3>
+            <p>Disponemos de tallas desde XXS hasta XXL para todos los gustos.</p>
+            <div class="size-buttons">
         <div class="size-button" onclick="showInput('XXS')">
             XXS
             <input type="number" id="input-XXS" min="0" value="0" onchange="updateSizeAndColor('XXS')">
@@ -52,14 +66,18 @@
             <span class="quantity" id="quantity-XXL">0</span>
         </div>
     </div>
+        </div>
+        <div class="feature-card">
+            <h3>Personalización Total</h3>
+            <p>Agrega texto, imágenes o logos de tu preferencia.</p>
 
-    <div class="tabs">
+            <div class="tabs">
         <div class="tab active" data-tab="front" onclick="switchTab('front')">Pecho</div>
         <div class="tab" data-tab="back" onclick="switchTab('back')">Espalda</div>
         <div class="tab" data-tab="leftsleeve" onclick="switchTab('leftsleeve')">Manga Izquierda</div>
         <div class="tab" data-tab="rightsleeve" onclick="switchTab('rightsleeve')">Manga Derecha</div>
     </div>
-    
+    <div id="text-message" style="display: none;">¡Texto agregado!</div>
     <div class="canvas-container" id="front-canvas-container">
         <canvas id="front-canvas" width="580" height="680"></canvas>
     </div>
@@ -75,6 +93,7 @@
     <div class="zoom-controls">
         <button id="zoom-in" onclick="zoomIn()">+</button>
         <button id="zoom-out" onclick="zoomOut()">-</button>
+        <button id="reset-zoom" onclick="resetZoom()">⟳</button>
     </div>
     <div class="mini-map-container">
         <canvas id="mini-map" width="150" height="200"></canvas>
@@ -98,17 +117,29 @@
             <div class="toolbar" id="image-toolbar">
                 <label for="image-border">Borde:</label>
                 <input type="color" id="image-border" oninput="updateImageBorder()">
-
                 <button class="dlt" onclick="deleteSelectedObject()">Eliminar</button>
             </div>
         </div>
         <button class="button controlsbtn" onclick="addText()">Agregar Texto</button>
         <button class="button controlsbtn" onclick="addImage()">Agregar Imagen</button>
     </div>
+        </div>
+        <div class="feature-card">
+            <h3>Previsualización</h3>
+            <p>Visualiza el diseño antes de realizar tu pedido.</p>
+        </div>
+    </div>
+
+    
+    
+    
 
     <input type="file" id="image-input" style="display: none;" accept="image/*" onchange="uploadImage()">
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/4.5.0/fabric.min.js"></script>
+    <div class="footer">
+        <p>© 2025 Diseñador de Camisetas. Todos los derechos reservados.</p>
+    </div>
     <script>
         const contextMenu = document.getElementById('context-menu');
         let canvases = {
@@ -186,16 +217,25 @@
 
         function addText() {
             const text = new fabric.IText('Texto', {
-                left: 50,
-                top: 50,
+                left: 350,
+                top: 200,
                 fontSize: 24,
-                fill: '#000',
+                fill: '#FF0000',
                 borderColor: 'black',
                 cornerColor: 'blue',
                 cornerSize: 8,
                 transparentCorners: false,
             });
             canvases[selectedTab].add(text);
+
+            // Muestra el mensaje de que el texto ha sido agregado
+            const message = document.getElementById('text-message');
+            message.style.display = 'block';
+
+            // Ocultar el mensaje después de 3 segundos
+            setTimeout(() => {
+                message.style.display = 'none';
+            }, 3000);
         }
 
         function addImage() {
@@ -446,10 +486,13 @@
             const canvas = canvases[selectedTab];
             canvas.setZoom(canvas.getZoom() * 1.2);
         }
-
         function zoomOut() {
             const canvas = canvases[selectedTab];
             canvas.setZoom(canvas.getZoom() / 1.2);
+        }
+        function resetZoom() {
+            const canvas = canvases[selectedTab];
+            canvas.setZoom(1); // Restaura el zoom al nivel inicial
         }
         // Muestra el campo de entrada cuando se hace clic en la talla
         function showInput(size) {
@@ -481,7 +524,9 @@
             }
             inputField.click();
         }
-
+        function scrollToFeatures() {
+            document.getElementById('features').scrollIntoView({ behavior: 'smooth' });
+        }
     </script>
 </body>
 </html>
