@@ -4,213 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Diseñador de Camisetas</title>
-    <style>
-        body {
-            margin: 0;
-            padding: 0;
-            font-family: Arial, sans-serif;
-            background-color: #f5f5f5;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-
-        .color-buttons, .size-buttons {
-            display: flex;
-            gap: 10px;
-            margin: 10px 0;
-            flex-wrap: wrap;
-            justify-content: center;
-        }
-
-        .color-button, .size-button {
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            cursor: pointer;
-            transition: background-color 0.3s ease;
-            font-size: 14px;
-        }
-
-        .color-button {
-            width: 30px;
-            height: 30px;
-        }
-
-        .color-black { background-color: black; }
-        .color-white { background-color: white; border: 1px solid #ccc; }
-        .color-gray { background-color: gray; }
-        .color-red { background-color: red; }
-        .color-blue { background-color: blue; }
-
-        .size-button {
-            background-color: #fff;
-            min-width: 20px;
-            text-align: center;
-        }
-
-        .tabs {
-            display: flex;
-            justify-content: center;
-            margin: 10px 0;
-            flex-wrap: wrap;
-            gap: 10px;
-        }
-        .controls {
-            display: flex;
-            flex-wrap: wrap;
-            justify-content: center;
-            gap: 10px;
-            padding: 10px;
-            position: fixed;
-            bottom: 10px;
-            width: 100%;
-            background-color: rgba(255, 255, 255, 0.9);
-        }
-        .tab, .controlsbtn{
-            padding: 10px 20px;
-            cursor: pointer;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            background-color: #fff;
-            margin: 0 5px;
-            transition: background-color 0.3s ease;
-        }
-
-        .tab.active {
-            background-color: #007BFF;
-            color: white;
-        }
-
-        .canvas-container {
-            position: relative;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            background-color: #fff;
-            border: 1px solid #ddd;
-            border-radius: 10px;
-            width: 100%;
-            max-width: 600px;
-            height: 700px;
-            margin-bottom: 20px;
-        }
-
-        canvas {
-            max-width: 100%;
-            max-height: 100%;
-        }
-
-        .toolbar {
-            justify-content: center;
-            flex-wrap: wrap;
-            gap: 10px;
-            margin: 10px 0;
-        }
-        .context-menu button.dlt{
-            background-color:rgb(255, 0, 0);
-        }
-        .context-menu button {
-            
-            border: none;
-            border-radius: 5px;
-            padding: 10px;
-            color: white;
-            cursor: pointer;
-            font-size: 14px;
-            transition: background-color 0.3s ease;
-        }
-
-        .context-menu button:hover {
-            background-color: #0056b3;
-        }
-
-        .context-menu input, .context-menu select {
-            border: 1px solid #ddd;
-            border-radius: 5px;
-        }
-
-        .context-menu label {
-            font-size: 14px;
-        }
-
-        .mini-map-container {
-            position: absolute;
-            bottom: 10px;
-            right: 10px;
-            width: 20vw;
-            max-width: 150px;
-            height: 25vw;
-            max-height: 200px;
-            border: 2px solid #ddd;
-            background-color: rgba(255, 255, 255, 0.8);
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
-        }
-
-        .mini-map-container canvas {
-            display: block;
-            max-width: 100%;
-            max-height: 100%;
-        }
-        .zoom-controls {
-            position: absolute;
-            bottom: 10px;
-            left: 10px;
-            display: flex;
-            flex-direction: column;
-            gap: 5px;
-        }
-
-        .zoom-controls button {
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            cursor: pointer;
-            background-color: #fff;
-        }
-        /* Media queries para pantallas pequeñas */
-        @media (max-width: 768px) {
-            .canvas-container {
-                width: 100%;
-
-            }
-
-            .color-buttons, .size-buttons, .tabs {
-                gap: 5px;
-            }
-
-            .color-button {
-                width: 25px;
-                height: 25px;
-            }
-
-            .size-button {
-                font-size: 12px;
-                padding: 5px;
-            }
-
-            .tab {
-                font-size: 12px;
-                padding: 8px;
-            }
-        }
-
-        @media (max-width: 480px) {
-            .canvas-container {
-                height: 50vw;
-            }
-
-            .zoom-controls {
-                bottom: 5px;
-                left: 5px;
-            }
-
-            .mini-map-container {
-                width: 100px;
-                height: 150px;
-            }
-        }
-    </style>
+    <link rel="stylesheet" href="styles.css">
 </head>
 <body>
     <div class="color-buttons">
@@ -222,13 +16,41 @@
     </div>
 
     <div class="size-buttons">
-        <div class="size-button" onclick="addSize('XXS')">XXS</div>
-        <div class="size-button" onclick="addSize('XS')">XS</div>
-        <div class="size-button" onclick="addSize('S')">S</div>
-        <div class="size-button" onclick="addSize('M')">M</div>
-        <div class="size-button" onclick="addSize('L')">L</div>
-        <div class="size-button" onclick="addSize('XL')">XL</div>
-        <div class="size-button" onclick="addSize('XXL')">2XL</div>
+        <div class="size-button" onclick="showInput('XXS')">
+            XXS
+            <input type="number" id="input-XXS" min="0" value="0" onchange="updateSizeAndColor('XXS')">
+            <span class="quantity" id="quantity-XXS">0</span>
+        </div>
+        <div class="size-button" onclick="showInput('XS')">
+            XS
+            <input type="number" id="input-XS" min="0" value="0" onchange="updateSizeAndColor('XS')">
+            <span class="quantity" id="quantity-XS">0</span>
+        </div>
+        <div class="size-button" onclick="showInput('S')">
+            S
+            <input type="number" id="input-S" min="0" value="0" onchange="updateSizeAndColor('S')">
+            <span class="quantity" id="quantity-S">0</span>
+        </div>
+        <div class="size-button" onclick="showInput('M')">
+            M
+            <input type="number" id="input-M" min="0" value="0" onchange="updateSizeAndColor('M')">
+            <span class="quantity" id="quantity-M">0</span>
+        </div>
+        <div class="size-button" onclick="showInput('L')">
+            L
+            <input type="number" id="input-L" min="0" value="0" onchange="updateSizeAndColor('L')">
+            <span class="quantity" id="quantity-L">0</span>
+        </div>
+        <div class="size-button" onclick="showInput('XL')">
+            XL
+            <input type="number" id="input-XL" min="0" value="0" onchange="updateSizeAndColor('XL')">
+            <span class="quantity" id="quantity-XL">0</span>
+        </div>
+        <div class="size-button" onclick="showInput('XXL')">
+            2XL
+            <input type="number" id="input-XXL" min="0" value="0" onchange="updateSizeAndColor('XXL')">
+            <span class="quantity" id="quantity-XXL">0</span>
+        </div>
     </div>
 
     <div class="tabs">
@@ -237,18 +59,18 @@
         <div class="tab" data-tab="leftsleeve" onclick="switchTab('leftsleeve')">Manga Izquierda</div>
         <div class="tab" data-tab="rightsleeve" onclick="switchTab('rightsleeve')">Manga Derecha</div>
     </div>
-
+    
     <div class="canvas-container" id="front-canvas-container">
-        <canvas id="front-canvas" width="550" height="650"></canvas>
+        <canvas id="front-canvas" width="580" height="680"></canvas>
     </div>
     <div class="canvas-container" id="back-canvas-container" style="display:none;">
-        <canvas id="back-canvas" width="550" height="650"></canvas>
+        <canvas id="back-canvas" width="580" height="680"></canvas>
     </div>
     <div class="canvas-container" id="leftsleeve-canvas-container" style="display:none;">
-        <canvas id="leftsleeve-canvas" width="550" height="650"></canvas>
+        <canvas id="leftsleeve-canvas" width="580" height="680"></canvas>
     </div>
     <div class="canvas-container" id="rightsleeve-canvas-container" style="display:none;">
-        <canvas id="rightsleeve-canvas" width="550" height="650"></canvas>
+        <canvas id="rightsleeve-canvas" width="580" height="680"></canvas>
     </div>
     <div class="zoom-controls">
         <button id="zoom-in" onclick="zoomIn()">+</button>
@@ -270,14 +92,14 @@
                 <label for="text-border">Borde:</label>
                 <input type="color" id="text-border" oninput="updateTextBorder()">
 
-                <button class="dlt"onclick="deleteSelectedObject()">Eliminar</button>
+                <button class="dlt" onclick="deleteSelectedObject()">Eliminar</button>
             </div>
 
             <div class="toolbar" id="image-toolbar">
                 <label for="image-border">Borde:</label>
                 <input type="color" id="image-border" oninput="updateImageBorder()">
 
-                <button onclick="deleteSelectedObject()">Eliminar</button>
+                <button class="dlt" onclick="deleteSelectedObject()">Eliminar</button>
             </div>
         </div>
         <button class="button controlsbtn" onclick="addText()">Agregar Texto</button>
@@ -629,6 +451,37 @@
             const canvas = canvases[selectedTab];
             canvas.setZoom(canvas.getZoom() / 1.2);
         }
+        // Muestra el campo de entrada cuando se hace clic en la talla
+        function showInput(size) {
+            const inputField = document.getElementById(`input-${size}`);
+            const quantityLabel = document.getElementById(`quantity-${size}`);
+            
+            // Alterna la visibilidad del campo de entrada
+            inputField.style.display = inputField.style.display === 'none' ? 'inline-block' : 'none';
+
+            // Si el campo de entrada está visible, enfoque en él
+            if (inputField.style.display === 'inline-block') {
+                inputField.focus();
+            }
+        }
+
+        function updateSizeAndColor(size) {
+            const inputField = document.getElementById(`input-${size}`);
+            const quantityLabel = document.getElementById(`quantity-${size}`);
+            const quantity = inputField.value;
+
+            // Muestra el valor actualizado en el span correspondiente
+            quantityLabel.innerText = quantity;
+
+            // Cambia el color si el número es mayor a 1
+            if (parseInt(quantity) > 1) {
+                quantityLabel.classList.add('edited');
+            } else {
+                quantityLabel.classList.remove('edited');
+            }
+            inputField.click();
+        }
+
     </script>
 </body>
 </html>

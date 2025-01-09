@@ -1,0 +1,253 @@
+body {
+    margin: 0;
+    padding: 0;
+    font-family: Arial, sans-serif;
+    background-color: #f5f5f5;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    height: 100vh;
+}
+
+.color-buttons, .size-buttons {
+    display: flex;
+    gap: 10px;
+    margin: 10px 0;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.color-button, .size-button {
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+    font-size: 14px;
+}
+
+.color-button {
+    width: 30px;
+    height: 30px;
+}
+
+.color-black { background-color: black; }
+.color-white { background-color: white; border: 1px solid #ccc; }
+.color-gray { background-color: gray; }
+.color-red { background-color: red; }
+.color-blue { background-color: blue; }
+
+.size-button {
+    background-color: #fff;
+    min-width: 20px;
+    text-align: center;
+}
+
+.tabs {
+    display: flex;
+    justify-content: center;
+    margin: 10px 0;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.controls {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px;
+    padding: 10px;
+    position: fixed;
+    bottom: 10px;
+    width: 100%;
+    background-color: rgba(255, 255, 255, 0.9);
+}
+
+.tab, .controlsbtn{
+    padding: 10px 20px;
+    cursor: pointer;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    background-color: #fff;
+    margin: 0 5px;
+    transition: background-color 0.3s ease;
+}
+
+.tab.active {
+    background-color: #007BFF;
+    color: white;
+}
+
+.canvas-container{
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: #fff;
+    border: 1px solid #ddd;
+    border-radius: 10px;
+    width: 100%;
+    max-width: 600px;
+    height: 700px;
+    margin-bottom: 20px;
+    margin-top: 20px;
+}
+
+canvas {
+    max-width: 100%;
+    max-height: 100%;
+}
+
+.toolbar {
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin: 10px 0;
+}
+
+.context-menu button.dlt{
+    background-color:rgb(255, 0, 0);
+}
+
+.context-menu button {
+    border: none;
+    border-radius: 5px;
+    padding: 10px;
+    color: white;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background-color 0.3s ease;
+}
+
+.context-menu button:hover {
+    background-color: #0056b3;
+}
+
+.context-menu input, .context-menu select {
+    border: 1px solid #ddd;
+    border-radius: 5px;
+}
+
+.context-menu label {
+    font-size: 14px;
+}
+
+.mini-map-container {
+    position: absolute;
+    bottom: 10px;
+    right: 10px;
+    width: 20vw;
+    max-width: 150px;
+    height: 25vw;
+    max-height: 200px;
+    border: 2px solid #ddd;
+    background-color: rgba(255, 255, 255, 0.8);
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+}
+
+.mini-map-container canvas {
+    display: block;
+    max-width: 100%;
+    max-height: 100%;
+}
+
+.zoom-controls {
+    position: absolute;
+    bottom: 10px;
+    left: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.zoom-controls button {
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    cursor: pointer;
+    background-color: #fff;
+}
+
+.size-buttons {
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+.size-button {
+    position: relative;
+    padding: 10px;
+    background-color: #f0f0f0;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    text-align: center;
+    cursor: pointer;
+    width: 60px;
+}
+
+.size-button input {
+    display: none;
+    width: 40px;
+    text-align: center;
+    font-size: 16px;
+    padding: 5px;
+    border-radius: 5px;
+    border: 1px solid #ccc;
+}
+
+.size-button .quantity {
+    font-size: 18px;
+    font-weight: bold;
+    display: block;
+    margin-top: 5px;
+}
+
+.size-button .quantity.edited {
+    color: red; /* Color llamativo si el número es mayor a 1 */
+}
+
+/* Media queries para pantallas pequeñas */
+@media (max-width: 768px) {
+    .color-buttons, .size-buttons, .tabs {
+        gap: 5px;
+        flex-direction: row;
+    }
+
+    .color-button {
+        width: 25px;
+        height: 25px;
+    }
+
+    .size-button {
+        font-size: 12px;
+        padding: 5px;
+        width: 45px; /* Ajusta el tamaño del botón */
+    }
+
+    .tab {
+        font-size: 12px;
+        padding: 8px;
+    }
+}
+
+@media (max-width: 480px) {
+    .canvas-container {
+        height: 160vw;
+    }
+
+    .zoom-controls {
+        bottom: 5px;
+        left: 5px;
+    }
+
+    .mini-map-container {
+        width: 80px;
+        height: 120px;
+    }
+
+    .size-button {
+        font-size: 10px;
+        padding: 5px;
+        width: 40px; /* Reducir el tamaño en pantallas más pequeñas */
+    }
+}
