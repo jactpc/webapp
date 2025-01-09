@@ -72,67 +72,63 @@
             <p>Agrega texto, imágenes o logos de tu preferencia.</p>
 
             <div class="tabs">
-        <div class="tab active" data-tab="front" onclick="switchTab('front')">Pecho</div>
-        <div class="tab" data-tab="back" onclick="switchTab('back')">Espalda</div>
-        <div class="tab" data-tab="leftsleeve" onclick="switchTab('leftsleeve')">Manga Izquierda</div>
-        <div class="tab" data-tab="rightsleeve" onclick="switchTab('rightsleeve')">Manga Derecha</div>
-    </div>
-    <div id="text-message" style="display: none;">¡Texto agregado!</div>
-    <div class="canvas-container" id="front-canvas-container">
-        <canvas id="front-canvas" width="580" height="680"></canvas>
-    </div>
-    <div class="canvas-container" id="back-canvas-container" style="display:none;">
-        <canvas id="back-canvas" width="580" height="680"></canvas>
-    </div>
-    <div class="canvas-container" id="leftsleeve-canvas-container" style="display:none;">
-        <canvas id="leftsleeve-canvas" width="580" height="680"></canvas>
-    </div>
-    <div class="canvas-container" id="rightsleeve-canvas-container" style="display:none;">
-        <canvas id="rightsleeve-canvas" width="580" height="680"></canvas>
-    </div>
-    <div class="zoom-controls">
-        <button id="zoom-in" onclick="zoomIn()">+</button>
-        <button id="zoom-out" onclick="zoomOut()">-</button>
-        <button id="reset-zoom" onclick="resetZoom()">⟳</button>
-    </div>
-    <div class="mini-map-container">
-        <canvas id="mini-map" width="150" height="200"></canvas>
-    </div>
-
-    <div class="controls">
-        <div id="context-menu" class="context-menu" style="display:none;">
-            <div class="toolbar" id="text-toolbar">
-                <label for="text-color">Color de Texto:</label>
-                <input type="color" id="text-color" oninput="updateTextColor()">
-
-                <label for="text-size">Tamaño:</label>
-                <input type="number" id="text-size" value="20" min="10" max="100" onchange="updateTextSize()">
-
-                <label for="text-border">Borde:</label>
-                <input type="color" id="text-border" oninput="updateTextBorder()">
-
-                <button class="dlt" onclick="deleteSelectedObject()">Eliminar</button>
+                <div class="tab active" data-tab="front" onclick="switchTab('front')">Pecho</div>
+                <div class="tab" data-tab="back" onclick="switchTab('back')">Espalda</div>
+                <div class="tab" data-tab="leftsleeve" onclick="switchTab('leftsleeve')">Manga Izquierda</div>
+                <div class="tab" data-tab="rightsleeve" onclick="switchTab('rightsleeve')">Manga Derecha</div>
+            </div>
+            <div id="text-message" style="display: none;">¡Texto agregado!</div>
+            <div class="canvas-container" id="front-canvas-container">
+                <canvas id="front-canvas" width="580" height="680"></canvas>
+            </div>
+            <div class="canvas-container" id="back-canvas-container" style="display:none;">
+                <canvas id="back-canvas" width="580" height="680"></canvas>
+            </div>
+            <div class="canvas-container" id="leftsleeve-canvas-container" style="display:none;">
+                <canvas id="leftsleeve-canvas" width="580" height="680"></canvas>
+            </div>
+            <div class="canvas-container" id="rightsleeve-canvas-container" style="display:none;">
+                <canvas id="rightsleeve-canvas" width="580" height="680"></canvas>
+            </div>
+            <div class="zoom-controls">
+                <button id="zoom-in" onclick="zoomIn()">+</button>
+                <button id="zoom-out" onclick="zoomOut()">-</button>
+                <button id="reset-zoom" onclick="resetZoom()">⟳</button>
+            </div>
+            <div class="mini-map-container">
+                <canvas id="mini-map" width="150" height="200"></canvas>
             </div>
 
-            <div class="toolbar" id="image-toolbar">
-                <label for="image-border">Borde:</label>
-                <input type="color" id="image-border" oninput="updateImageBorder()">
-                <button class="dlt" onclick="deleteSelectedObject()">Eliminar</button>
+            <div class="controls">
+                <div id="context-menu" class="context-menu" style="display:none;">
+                    <div class="toolbar" id="text-toolbar">
+                        <label for="text-color">Color de Texto:</label>
+                        <input type="color" id="text-color" oninput="updateTextColor()">
+
+                        <label for="text-size">Tamaño:</label>
+                        <input type="number" id="text-size" value="20" min="10" max="100" onchange="updateTextSize()">
+
+                        <label for="text-border">Borde:</label>
+                        <input type="color" id="text-border" oninput="updateTextBorder()">
+
+                        <button class="dlt" onclick="deleteSelectedObject()">Eliminar</button>
+                    </div>
+
+                    <div class="toolbar" id="image-toolbar">
+                        <label for="image-border">Borde:</label>
+                        <input type="color" id="image-border" oninput="updateImageBorder()">
+                        <button class="dlt" onclick="deleteSelectedObject()">Eliminar</button>
+                    </div>
+                </div>
+                <button class="button controlsbtn" onclick="addText()">Agregar Texto</button>
+                <button class="button controlsbtn" onclick="addImage()">Agregar Imagen</button>
             </div>
-        </div>
-        <button class="button controlsbtn" onclick="addText()">Agregar Texto</button>
-        <button class="button controlsbtn" onclick="addImage()">Agregar Imagen</button>
-    </div>
         </div>
         <div class="feature-card">
             <h3>Previsualización</h3>
             <p>Visualiza el diseño antes de realizar tu pedido.</p>
         </div>
     </div>
-
-    
-    
-    
 
     <input type="file" id="image-input" style="display: none;" accept="image/*" onchange="uploadImage()">
 
