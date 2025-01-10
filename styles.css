@@ -1,3 +1,4 @@
+
 body {
     margin: 0;
     padding: 0;
@@ -209,7 +210,7 @@ canvas {
 
 @media (min-width: 768px) {
     .color-button, .size-button {
-        font-size: 37px;
+        font-size: 18px;
     }
     .size-button .quantity {
         font-size: 26px;
@@ -251,6 +252,9 @@ canvas {
     }
 }
 @media (max-width: 425px) {
+    .canvas-container{
+        height: 371px;
+    }
     .zoom-controls {
         bottom: 5px;
         left: 5px;

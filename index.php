@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Diseñador de Camisetas</title>
     <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Playwrite+AU+SA&family=Tomorrow:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap" rel="stylesheet">
+
 </head>
 <body>
     <!-- Hero Section -->
@@ -106,7 +108,18 @@
                         <input type="color" id="text-color" oninput="updateTextColor()">
 
                         <label for="text-size">Tamaño:</label>
-                        <input type="number" id="text-size" value="20" min="10" max="100" onchange="updateTextSize()">
+                        <input type="number" id="text-size" value="24" min="10" max="100" onchange="updateTextSize()">
+                        
+                        <label for="text-font">Fuente:</label>
+                        <select id="text-font" onchange="updateTextFont()">
+                            <option value="Arial">Arial</option>
+                            <option value="VT323">VT323</option>
+                            <option value="Pacifico">Pacifico</option>
+                            <option value="Lato100">Lato (Light)</option>
+                            <option value="Lato900">Lato (Bold)</option>
+                            <option value="Playwrite AU SA">Playwrite Australia SA</option>
+                            <option value="Tomorrow">Tomorrow</option>
+                        </select>
 
                         <label for="text-border">Borde:</label>
                         <input type="color" id="text-border" oninput="updateTextBorder()">
@@ -211,6 +224,52 @@
             });
         }
 
+        const fonts = [
+            {
+                name: 'Tomorrow',
+                url: 'https://fonts.gstatic.com/s/tomorrow/v17/WBLhrETNbFtZCeGqgR0dWnXBDMWDikd56VY.woff2',
+            },
+            {
+                name: 'Playwrite AU SA',
+                url: 'https://fonts.gstatic.com/s/playwriteausa/v4/YcmhsZpNS1SdgmHbGgtRuUElnR3CmSC5bVQVlrclpZgRcuBjDIV1.woff2',
+            },
+            {
+                name: 'Lato900',
+                url: 'https://fonts.gstatic.com/s/lato/v24/S6u9w4BMUTPHh50XSwiPGQ3q5d0.woff2',
+            },
+            {
+                name: 'Lato100',
+                url: 'https://fonts.gstatic.com/s/lato/v24/S6u8w4BMUTPHh30AXC-qNiXg7Q.woff2',
+            },
+            {
+                name: 'VT323',
+                url: 'https://fonts.gstatic.com/s/vt323/v17/pxiKyp0ihIEF2isfFJXUdVNF.woff2',
+            },
+            {
+                name: 'Pacifico',
+                url: 'https://fonts.gstatic.com/s/pacifico/v22/FwZY7-Qmy14u9lezJ-6H6MmBp0u-.woff2',
+            },
+        ];
+
+        function loadFonts(fonts) {
+            const fontPromises = fonts.map((font) => {
+            const fontFace = new FontFace(font.name, `url(${font.url})`);
+            return fontFace.load().then((loadedFont) => {
+                document.fonts.add(loadedFont);
+                console.log(`Font ${font.name} loaded.`);
+            }).catch((error) => {
+                console.error(`Failed to load font ${font.name}:`, error);
+            });
+        });
+
+        return Promise.all(fontPromises);
+        }
+
+        // Llama a la función para cargar todas las fuentes
+        loadFonts(fonts).then(() => {
+            console.log('All fonts loaded.');
+        });
+
         function addText() {
             const text = new fabric.IText('Texto', {
                 left: 350,
@@ -233,6 +292,26 @@
                 message.style.display = 'none';
             }, 3000);
         }
+        function updateTextFont() {
+            const font = document.getElementById('text-font').value;
+            const activeObject = canvases[selectedTab].getActiveObject();
+
+            if (activeObject && activeObject.type === 'i-text') {
+                activeObject.set('fontFamily', font);
+                canvases[selectedTab].renderAll();
+            }
+        }
+        function applyFontToObject(fontName, object) {
+            const fontFace = new FontFace(fontName, `url(${fonts.find(f => f.name === fontName).url})`);
+
+            fontFace.load().then(() => {
+                document.fonts.add(fontFace);
+                object.set('fontFamily', fontName);
+                canvases[selectedTab].renderAll();
+            }).catch((error) => {
+                console.error(`Failed to apply font ${fontName}:`, error);
+            });
+            }
 
         function addImage() {
             const input = document.createElement('input');
@@ -344,6 +423,20 @@
                 }
             });
         });
+        canvases[selectedTab].on('selection:created', (e) => {
+  const selected = e.target;
+
+  if (selected && selected.type === 'i-text') {
+    document.getElementById('text-toolbar').style.display = 'block';
+    document.getElementById('text-color').value = selected.fill || '#000000';
+    document.getElementById('text-size').value = selected.fontSize || 24;
+    document.getElementById('text-font').value = selected.fontFamily || 'Arial';
+  }
+});
+
+canvases[selectedTab].on('selection:cleared', () => {
+  document.getElementById('text-toolbar').style.display = 'none';
+});
 
         function showContextMenu(pointer) {
             contextMenu.style.display = 'block';
