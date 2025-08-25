@@ -121,6 +121,14 @@
                             <option value="Lato900">Lato (Bold)</option>
                             <option value="Playwrite AU SA">Playwrite Australia SA</option>
                             <option value="Tomorrow">Tomorrow</option>
+                            <option value="Roboto">Roboto</option>
+                            <option value="Montserrat">Montserrat</option>
+                            <option value="Open Sans">Open Sans</option>
+                            <option value="Oswald">Oswald</option>
+                            <option value="Raleway">Raleway</option>
+                            <option value="Merriweather">Merriweather</option>
+                            <option value="Dancing Script">Dancing Script</option>
+                            <option value="Bebas Neue">Bebas Neue</option>
                         </select>
 
                         <label for="text-border">Borde:</label>
@@ -281,8 +289,19 @@ const fonts = [
   { name: 'Lato900', url: 'https://fonts.gstatic.com/s/lato/v24/S6u9w4BMUTPHh50XSwiPGQ3q5d0.woff2' },
   { name: 'Lato100', url: 'https://fonts.gstatic.com/s/lato/v24/S6u8w4BMUTPHh30AXC-qNiXg7Q.woff2' },
   { name: 'VT323', url: 'https://fonts.gstatic.com/s/vt323/v17/pxiKyp0ihIEF2isfFJXUdVNF.woff2' },
-  { name: 'Pacifico', url: 'https://fonts.gstatic.com/s/pacifico/v22/FwZY7-Qmy14u9lezJ-6H6MmBp0u-.woff2' }
+  { name: 'Pacifico', url: 'https://fonts.gstatic.com/s/pacifico/v22/FwZY7-Qmy14u9lezJ-6H6MmBp0u-.woff2' },
+  
+  // Nuevas fuentes agregadas
+  { name: 'Roboto', url: 'https://cdn.jsdelivr.net/fontsource/fonts/roboto-flex@latest/latin-400-normal.woff2' },
+  { name: 'Montserrat', url: 'https://cdn.jsdelivr.net/fontsource/fonts/montserrat:vf@latest/latin-wght-normal.woff2' },
+  { name: 'Open Sans', url: 'https://cdn.jsdelivr.net/fontsource/fonts/open-sans@latest/latin-400-normal.woff2' },
+  { name: 'Oswald', url: 'https://cdn.jsdelivr.net/wp/themes/airin-blog/1.5.2/fonts/oswald/oswald.woff2' },
+  { name: 'Raleway', url: 'https://cdn.jsdelivr.net/fontsource/fonts/raleway:vf@latest/latin-wght-normal.woff2' },
+  { name: 'Merriweather', url: 'https://cdn.jsdelivr.net/fontsource/fonts/merriweather:vf@latest/latin-wght-normal.woff2' },
+  { name: 'Dancing Script', url: 'https://cdn.jsdelivr.net/fontsource/fonts/dancing-script:vf@latest/latin-wght-normal.woff2' },
+  { name: 'Bebas Neue', url: 'https://cdn.jsdelivr.net/fontsource/fonts/bebas-neue@latest/latin-400-normal.woff2' }
 ];
+
 
 function loadFonts(list) {
   const fontPromises = list.map(font => {
