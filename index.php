@@ -21,58 +21,30 @@
             <h3>Variedad de Colores</h3>
             <p>Escoge entre una amplia gama de colores para tu camiseta.</p>
             <div class="color-buttons">
-                <div class="color-button color-black" onclick="changeTshirtColor('black')"></div>
-                <div class="color-button color-white" onclick="changeTshirtColor('white')"></div>
-                <div class="color-button color-gray" onclick="changeTshirtColor('gray')"></div>
-                <div class="color-button color-red" onclick="changeTshirtColor('red')"></div>
-                <div class="color-button color-blue" onclick="changeTshirtColor('blue')"></div>
+                <div class="color-button color-black" onclick="changeTshirtColor('black', this)"></div>
+                <div class="color-button color-white" onclick="changeTshirtColor('white', this)"></div>
+                <div class="color-button color-gray" onclick="changeTshirtColor('gray', this)"></div>
+                <div class="color-button color-red" onclick="changeTshirtColor('red', this)"></div>
+                <div class="color-button color-blue" onclick="changeTshirtColor('blue', this)"></div>
             </div>
         </div>
         <div class="feature-card">
             <h3>Diversidad de Tamaños</h3>
             <p>Disponemos de tallas desde XXS hasta XXL para todos los gustos.</p>
             <div class="size-buttons">
-        <div class="size-button" onclick="showInput('XXS')">
-            XXS
-            <input type="number" id="input-XXS" min="0" value="0" onchange="updateSizeAndColor('XXS')">
-            <span class="quantity" id="quantity-XXS">0</span>
+                <div class="size-button">XXS<span class="quantity" id="quantity-XXS" contenteditable="true">0</span></div>
+                <div class="size-button">XS<span class="quantity" id="quantity-XS" contenteditable="true">0</span></div>
+                <div class="size-button">S<span class="quantity" id="quantity-S" contenteditable="true">0</span></div>
+                <div class="size-button">M<span class="quantity" id="quantity-M" contenteditable="true">0</span></div>
+                <div class="size-button">L<span class="quantity" id="quantity-L" contenteditable="true">0</span></div>
+                <div class="size-button">XL<span class="quantity" id="quantity-XL" contenteditable="true">0</span></div>
+                <div class="size-button">XXL<span class="quantity" id="quantity-XXL" contenteditable="true">0</span></div>
+            </div>
         </div>
-        <div class="size-button" onclick="showInput('XS')">
-            XS
-            <input type="number" id="input-XS" min="0" value="0" onchange="updateSizeAndColor('XS')">
-            <span class="quantity" id="quantity-XS">0</span>
-        </div>
-        <div class="size-button" onclick="showInput('S')">
-            S
-            <input type="number" id="input-S" min="0" value="0" onchange="updateSizeAndColor('S')">
-            <span class="quantity" id="quantity-S">0</span>
-        </div>
-        <div class="size-button" onclick="showInput('M')">
-            M
-            <input type="number" id="input-M" min="0" value="0" onchange="updateSizeAndColor('M')">
-            <span class="quantity" id="quantity-M">0</span>
-        </div>
-        <div class="size-button" onclick="showInput('L')">
-            L
-            <input type="number" id="input-L" min="0" value="0" onchange="updateSizeAndColor('L')">
-            <span class="quantity" id="quantity-L">0</span>
-        </div>
-        <div class="size-button" onclick="showInput('XL')">
-            XL
-            <input type="number" id="input-XL" min="0" value="0" onchange="updateSizeAndColor('XL')">
-            <span class="quantity" id="quantity-XL">0</span>
-        </div>
-        <div class="size-button" onclick="showInput('XXL')">
-            2XL
-            <input type="number" id="input-XXL" min="0" value="0" onchange="updateSizeAndColor('XXL')">
-            <span class="quantity" id="quantity-XXL">0</span>
-        </div>
-    </div>
-        </div>
+
         <div class="feature-card">
             <h3>Personalización Total</h3>
             <p>Agrega texto, imágenes o logos de tu preferencia.</p>
-
             <div class="tabs">
                 <div class="tab active" data-tab="front" onclick="switchTab('front')">Pecho</div>
                 <div class="tab" data-tab="back" onclick="switchTab('back')">Espalda</div>
@@ -96,7 +68,7 @@
                 <button class="button controlsbtn" onclick="addText()">✍️</button>
                 <button class="button controlsbtn" onclick="addImage()">🖼️</button>
                 <button id="zoom-in" onclick="zoomIn()">✚</button>
-                <button id="zoom-out" onclick="zoomOut()">➖</button>
+                <button id="zoom-out" onclick="zoomOut()">-</button>
                 <button id="reset-zoom" onclick="resetZoom()">🔄</button>
             </div>
             <div class="mini-map-container">
@@ -148,10 +120,10 @@
         <div class="feature-card">
         <h3>Previsualización</h3>
         <div id="preview-container" class="grid grid-cols-2 gap-2">
-            <canvas id="preview-front" width="180" height="220" class="border"></canvas>
-            <canvas id="preview-back" width="180" height="220" class="border"></canvas>
-            <canvas id="preview-leftsleeve" width="180" height="220" class="border"></canvas>
-            <canvas id="preview-rightsleeve" width="180" height="220" class="border"></canvas>
+            <canvas id="preview-front" width="180" height="220" class="border" onclick="switchTab('front')"></canvas>
+            <canvas id="preview-back" width="180" height="220" class="border" onclick="switchTab('back')"></canvas>
+            <canvas id="preview-leftsleeve" width="180" height="220" class="border" onclick="switchTab('leftsleeve')"></canvas>
+            <canvas id="preview-rightsleeve" width="180" height="220" class="border" onclick="switchTab('rightsleeve')"></canvas>
         </div>
         </div>
         <div class="feature-card">
@@ -274,13 +246,24 @@ function switchTab(tab) {
 }
 
 // ——— Cambio de color de camiseta (solo fondo) ———
-function changeTshirtColor(color) {
+function changeTshirtColor(color, element) {
   currentColor = color;
+
+  // Actualiza los fondos de todas las secciones
   Object.keys(canvases).forEach(section => {
     sectionsState[section].bgSrc = `img/1.${section}.${currentColor}.jpg`;
     loadBackground(section);
   });
+
+  // Quita la clase active de todos
+  document.querySelectorAll(".color-button").forEach(btn => {
+    btn.classList.remove("active");
+  });
+
+  // Agrega la clase active al botón seleccionado
+  if (element) element.classList.add("active");
 }
+
 
 // ——— Fuentes Google ———
 const fonts = [
@@ -290,8 +273,6 @@ const fonts = [
   { name: 'Lato100', url: 'https://fonts.gstatic.com/s/lato/v24/S6u8w4BMUTPHh30AXC-qNiXg7Q.woff2' },
   { name: 'VT323', url: 'https://fonts.gstatic.com/s/vt323/v17/pxiKyp0ihIEF2isfFJXUdVNF.woff2' },
   { name: 'Pacifico', url: 'https://fonts.gstatic.com/s/pacifico/v22/FwZY7-Qmy14u9lezJ-6H6MmBp0u-.woff2' },
-  
-  // Nuevas fuentes agregadas
   { name: 'Roboto', url: 'https://cdn.jsdelivr.net/fontsource/fonts/roboto-flex@latest/latin-400-normal.woff2' },
   { name: 'Montserrat', url: 'https://cdn.jsdelivr.net/fontsource/fonts/montserrat:vf@latest/latin-wght-normal.woff2' },
   { name: 'Open Sans', url: 'https://cdn.jsdelivr.net/fontsource/fonts/open-sans@latest/latin-400-normal.woff2' },
@@ -450,14 +431,24 @@ function uploadImage() {
 
 // ——— Menú contextual ———
 function showContextMenu(pointer, canvasEl) {
-  // Posicionar junto al objeto seleccionado (coordenadas de página)
+  const canvas = canvases[selectedTab];
+  const active = canvas.getActiveObject();
+  if (!active) return;
+
+  // Obtiene la posición del canvas en la página
   const rect = canvasEl.getBoundingClientRect();
-  contextMenu.style.left = `${rect.left + window.scrollX + pointer.x + 16}px`;
-  contextMenu.style.top = `${rect.top + window.scrollY + pointer.y + 16}px`;
+
+  // Calcula la posición del objeto dentro del canvas
+  const objLeft = active.left * canvas.getZoom() + canvas.viewportTransform[4];
+  const objTop = active.top * canvas.getZoom() + canvas.viewportTransform[5];
+  const objHeight = (active.height || 0) * active.scaleY * canvas.getZoom();
+
+  // Posiciona el menú justo debajo del objeto
+  contextMenu.style.left = `${rect.left + window.scrollX + objLeft}px`;
+  contextMenu.style.top = `${rect.top + window.scrollY + objTop + objHeight + 8}px`; // 8px de separación
   contextMenu.style.display = 'block';
 
-  const active = canvases[selectedTab].getActiveObject();
-  if (!active) return;
+  // Muestra la barra correspondiente
   if (active.type === 'i-text') {
     textToolbar.style.display = 'block';
     imageToolbar.style.display = 'none';
@@ -608,23 +599,45 @@ function resetZoom() {
   canvas.setZoom(1);
 }
 
-// ——— Tallas (UX) ———
-function showInput(size) {
-  const inputField = document.getElementById(`input-${size}`);
-  if (!inputField) return;
-  inputField.style.display = (inputField.style.display === 'none' || !inputField.style.display) ? 'inline-block' : 'none';
-  if (inputField.style.display === 'inline-block') inputField.focus();
-  inputField.onblur = () => (inputField.style.display = 'none');
-}
+document.querySelectorAll(".quantity").forEach(span => {
+  // Hacer editable
+  span.setAttribute("contenteditable", "true");
 
-function updateSizeAndColor(size) {
-  const inputField = document.getElementById(`input-${size}`);
-  const quantityLabel = document.getElementById(`quantity-${size}`);
-  const quantity = inputField.value;
-  if (quantityLabel) quantityLabel.innerText = quantity;
-  if (parseInt(quantity, 10) > 1) quantityLabel?.classList?.add('edited');
-  else quantityLabel?.classList?.remove('edited');
-}
+  // Al hacer click, si es 0, se borra
+  span.addEventListener("click", () => {
+    if (span.textContent.trim() === "0") {
+      span.textContent = "";
+    }
+  });
+
+  // Mientras escribes, solo permitir dígitos y actualizar color
+  span.addEventListener("input", () => {
+    span.textContent = span.textContent.replace(/\D/g, "");
+    
+    const value = parseInt(span.textContent, 10);
+    const button = span.closest(".size-button"); // Obtener contenedor
+
+    if (!isNaN(value) && value >= 1) {
+      span.style.color = "white";
+      button.classList.add("active"); // marcar como activo
+    } else {
+      span.style.color = "black";
+      button.classList.remove("active"); // quitar activo
+    }
+  });
+
+  // Al perder foco, si queda vacío poner 0
+  span.addEventListener("blur", () => {
+    if (span.textContent.trim() === "") {
+      span.textContent = "0";
+      span.style.color = "black";
+      span.closest(".size-button").classList.remove("active");
+    }
+  });
+});
+
+
+
 
 function addSize(size) {
   console.log(`Se seleccionó la talla ${size}`);
@@ -688,8 +701,6 @@ Object.assign(window, {
   uploadImage,
   updateImageBorder,
   deleteSelectedObject,
-  showInput,
-  updateSizeAndColor,
   scrollToFeatures,
   zoomIn,
   zoomOut,
@@ -767,8 +778,6 @@ Object.values(canvases).forEach((canvas) => {
     if (e.touches.length < 2) lastDistance = 0;
   });
 });
-
-
 
     </script>
 </body>
