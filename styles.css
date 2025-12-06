@@ -1,3 +1,5 @@
+/* ===== ICONOS GOOGLE ===== */
+@import url('https://fonts.googleapis.com/icon?family=Material+Icons');
 /* ======== Base ======== */
 body {
   margin: 0;
@@ -81,7 +83,6 @@ button, .tab, .controlsbtn, .size-button, .color-button {
 .tab, .controlsbtn {
   padding: 10px 20px;
   background: #fff;
-  margin: 0 5px;
 }
 
 .tab.active {
@@ -94,7 +95,7 @@ button, .tab, .controlsbtn, .size-button, .color-button {
 .tab.active, .tab:hover,
 .controlsbtn:hover,
 .size-button:hover,
-.zoom-controls button:hover,
+.canvas-controls button:hover,
 .color-button:active,
 .size-button.active {
   background: #007BFF;
@@ -116,7 +117,7 @@ button, .tab, .controlsbtn, .size-button, .color-button {
 .export-btn:hover { background: #218838; }
 
 /* ======== Canvas principal ======== */
-.canvas-container {
+.tshit_container{
   position: relative;
   display: flex;
   justify-content: center;
@@ -166,7 +167,7 @@ button, .tab, .controlsbtn, .size-button, .color-button {
 }
 .mini-map-container canvas { display: block; }
 
-.zoom-controls {
+.canvas-controls {
   position: absolute;
   bottom: 12vw;
   left: 5vw;
@@ -174,12 +175,12 @@ button, .tab, .controlsbtn, .size-button, .color-button {
   flex-direction: column;
   gap: 5px;
 }
-.zoom-controls button {
-  padding: 10px;
+.canvas-controls button {
+  padding: 6px;
   border-radius: 5px;
   background: #f0f0f0;
   font-size: 31px;
-  color: #fff;
+  color: #000000;
 }
 
 /* ======== Mensaje flotante ======== */
@@ -195,14 +196,17 @@ button, .tab, .controlsbtn, .size-button, .color-button {
 }
 
 /* ======== Hero Section ======== */
-.hero {
+.hero, .hero2{
   text-align: center;
-  padding: 50px 20px;
   background: #007BFF;
   color: #fff;
   width: 100%;
+  animation: fadeIn 0.5s ease;
 }
-.hero h1 { font-size: 2.5em; margin-bottom: 20px; }
+.hero {
+  padding: 50px 20px;  height: 100%;
+}
+.hero h1, .hero2 h1 { font-size: 2.5em; margin-bottom: 20px; }
 .hero p  { font-size: 1.2em; margin-bottom: 30px; }
 .hero button {
   padding: 10px 20px;
@@ -249,17 +253,313 @@ button, .tab, .controlsbtn, .size-button, .color-button {
   .size-button .quantity { font-size: 26px; }
 }
 @media (max-width: 768px) {
-  .color-button { width: 25px; height: 25px; }
+  .color-button { width: 50px; height: 50px; }
   .size-button { font-size: 12px; padding: 5px; width: 45px; }
   .tab { font-size: 22px; padding: 8px; }
   .hero h1 { font-size: 2em; }
   .hero p { font-size: 1em; }
   .hero button { font-size: 0.9em; }
+  #preview-container div canvas { width: 160px; height: 220px; }
 }
 @media (max-width: 425px) {
   .canvas-container { max-height: 483px; }
-  .zoom-controls { bottom: 5px; left: 5px; }
+  .canvas-controls { bottom: 5px; left: 5px; }
   .size-button { font-size: 10px; width: 40px; }
-  .feature-card { width: 94vw; }
+  .feature-card { width: 99vw; }
   .tab { font-size: 15px; }
+  .feature-card {padding: 10px;}
 }
+#preview-container {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+#preview-container div {
+    cursor: pointer;
+    display: inline-flex;
+    justify-content: center;
+    width: 161px;
+    margin: 5px;
+    border-radius: 10px;
+    flex-direction: row;
+    flex-wrap: wrap;
+    border: 1px solid #00000030;
+    padding: 8px;
+}
+
+    /* Estilos para el sistema step-by-step */
+    .steps-container {
+      display: flex;
+      justify-content: center;
+      margin: 10px 0;
+      padding: 0 20px;
+    }
+    
+    .step-indicator {
+      display: flex;
+      align-items: center;
+      width: 100%;
+      max-width: 800px;
+    }
+    
+    .step {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      position: relative;
+      flex: 1;
+      width: 90px;
+    }
+    
+    .step-circle {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background-color: #ddd;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      color: #666;
+      margin-bottom: 10px;
+      z-index: 2;
+      transition: all 0.3s ease;
+    }
+    
+    .step.active .step-circle {
+      background-color: #4A90E2;
+      color: white;
+    }
+    
+    .step.completed .step-circle {
+      background-color: #2ECC71;
+      color: white;
+    }
+    
+    .step-title {
+      font-size: 14px;
+      text-align: center;
+      color: #666;
+      font-weight: 500;
+    }
+    
+    .step.active .step-title{
+      color: #4A90E2;
+      font-weight: 600;
+    }
+    .step.active .step-line{
+      background: #4A90E2;
+      }
+    
+    .step.completed .step-title {
+      color: #2ECC71;
+    }
+    
+    .step-line {
+      top: 20px;
+      left: 50%;
+      width: 100%;
+      height: 3px;
+      background-color: #ddd;
+      z-index: 1;
+    }
+  
+    .feature-card {
+      display: none;
+      animation: fadeIn 0.5s ease;
+    }
+    
+    .feature-card.active {
+      display: block;
+    }
+    
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    
+    .navigation-buttons {
+      display: flex;
+      justify-content: space-between;
+      padding: 0 20px;
+      max-width: 800px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    
+    .nav-btn {
+      padding: 12px 30px;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .btn-prev {
+      background-color: #f5f5f5;
+      color: #666;
+    }
+    
+    .btn-prev:hover {
+      background-color: #e0e0e0;
+    }
+    
+    .btn-next {
+      background-color: #4A90E2;
+      color: white;
+    }
+    
+    .btn-next:hover {
+      background-color: #357ABD;
+    }
+    
+    .btn-next:disabled {
+      background-color: #cccccc;
+      cursor: not-allowed;
+    }
+    
+    .btn-finish {
+      background-color: #2ECC71;
+      color: white;
+    }
+    
+    .btn-finish:hover {
+      background-color: #27AE60;
+    }
+    
+    .step-validation {
+      color: #e74c3c;
+      font-size: 14px;
+      margin-top: 10px;
+      text-align: center;
+      display: none;
+    }
+    
+    .save-notification {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background-color: #2ECC71;
+      color: white;
+      padding: 12px 20px;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      display: none;
+      z-index: 1000;
+      animation: slideInRight 0.3s ease;
+    }
+    
+    @keyframes slideInRight {
+      from { transform: translateX(100%); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+    
+    .progress-summary {
+      background-color: #f9f9f9;
+      border-radius: 10px;
+      padding: 20px;
+      margin: 20px 0;
+      display: none;
+    }
+    
+    .progress-summary.active {
+      display: block;
+    }
+    
+    .summary-item {
+      margin: 10px 0;
+      padding: 10px;
+      background-color: white;
+      border-radius: 6px;
+      border-left: 4px solid #4A90E2;
+    }
+    .hidden { display: none; }
+
+    /* ====== CONTENEDOR GENERAL ====== */
+.context-menu {
+  background: #2b2b2b;
+  padding: 12px;
+  border-radius: 10px;
+  min-width: 260px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.45);
+  font-family: "Inter", "Roboto", sans-serif;
+  color: #fff;
+}
+
+/* ====== TOOLBAR ADOBE ====== */
+.toolbar {
+  display: flex;
+  flex-direction: row;
+  gap: 18px;
+  flex-wrap: nowrap;
+  align-items: flex-end;
+  overflow-x: auto;
+  padding: 20px 52px 20px 160px;
+}
+
+/* ====== CADA GRUPO ====== */
+.tool-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.tool-label {
+  font-size: 12px;
+  text-transform: uppercase;
+  font-weight: 600;
+  color: #bdbdbd;
+  margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+/* Íconos */
+.tool-label i {
+  font-size: 16px;
+  color: #e0e0e0;
+}
+
+/* ====== INPUTS ====== */
+input[type="color"],
+input[type="number"],
+select {
+  padding: 6px 10px;
+  background: #1e1e1e;
+  border: 1px solid #444444;
+  border-radius: 6px;
+  color: #fff;
+  outline: none;
+  transition: border 0.2s ease;
+}
+
+input:hover,
+select:hover {
+  border-color: #8f8f8f;
+}
+
+/* ====== BOTÓN ELIMINAR ====== */
+button.dlt {
+  padding: 10px;
+  background: #d32f2f;
+  border: none;
+  border-radius: 6px;
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+  transition: 0.2s ease;
+}
+
+button.dlt:hover {
+  background: #b12525;
+}
+.controls{
+  min-height: 93px;
+}
+
