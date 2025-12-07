@@ -103,7 +103,7 @@
         <div class="tool-label">
           <i class="material-icons">text_fields</i> Tamaño
         </div>
-        <input type="number" id="text-size" value="24" min="10" max="100" onchange="updateTextSize()">
+        <input type="number" id="text-size" value="24" min="10" max="999" onchange="updateTextSize()">
       </div>
 
       <div class="tool-group">
@@ -153,7 +153,8 @@
 
   </div>
 </div>
-
+  <div class="editor-container">
+    <div class="canvas-left">
       <div class="canvas-container tshit_container" id="front-canvas-container">
         <canvas id="front-canvas" width="620" height="800"></canvas>
       </div>
@@ -166,16 +167,24 @@
       <div class="canvas-container tshit_container" id="rightsleeve-canvas-container" style="display:none;">
         <canvas id="rightsleeve-canvas" width="620" height="800"></canvas>
       </div>
-      <div class="canvas-controls">
-        <button class="button controlsbtn" onclick="addText()">T</button>
-        <button class="button controlsbtn" onclick="addImage()">🖼️</button>
-      </div>
       <div class="mini-map-container">
-                <button id="zoom-in" onclick="zoomIn()">➕</button>
+        <button id="zoom-in" onclick="zoomIn()">➕</button>
         <button id="zoom-out" onclick="zoomOut()">➖</button>
         <button id="reset-zoom" onclick="resetZoom()">🔄</button>
         <canvas id="mini-map" width="175" height="200"></canvas>
       </div>
+    </div>
+    <div class="canvas-right">
+      <div class="canvas-controls">
+        <button class="button controlsbtn" onclick="addText()">T</button>
+        <button class="button controlsbtn" onclick="addImage()">🖼️</button>
+        <button class="button controlsbtn" onclick="addEmoji()">😀</button>
+      </div>
+        <h3>Elementos agregados</h3>
+        <ul id="elements-list"></ul>
+
+    </div>
+  </div>
     <div class="step-validation" id="step3-validation">Puedes personalizar tu diseño o continuar con el diseño básico</div>
     </div>
     

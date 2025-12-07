@@ -167,14 +167,6 @@ button, .tab, .controlsbtn, .size-button, .color-button {
 }
 .mini-map-container canvas { display: block; }
 
-.canvas-controls {
-  position: absolute;
-  bottom: 12vw;
-  left: 5vw;
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-}
 .canvas-controls button {
   padding: 6px;
   border-radius: 5px;
@@ -529,7 +521,7 @@ button, .tab, .controlsbtn, .size-button, .color-button {
 /* ====== INPUTS ====== */
 input[type="color"],
 input[type="number"],
-select {
+select, textarea {
   padding: 6px 10px;
   background: #1e1e1e;
   border: 1px solid #444444;
@@ -563,3 +555,34 @@ button.dlt:hover {
   min-height: 93px;
 }
 
+.editor-container {
+    display: flex;
+    gap: 20px;
+}
+
+.canvas-left {
+    width: 65%;
+}
+
+.canvas-right {
+    width: 35%;
+    background: #f5f5f5;
+    padding: 15px;
+    border-radius: 10px;
+}
+#elements-list {
+    padding: 0;
+}
+#elements-list li {
+    background: #fff;
+    padding: 10px;
+    margin-bottom: 8px;
+    border-radius: 6px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+#elements-list button {
+    margin-left: 8px;
+}

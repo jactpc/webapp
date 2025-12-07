@@ -398,7 +398,6 @@ function changeTshirtColor(color, element) {
 
 
 // ——— DOM fijos ———
-const deleteIcon = "data:image/svg+xml,%3C%3Fxml version='1.0' encoding='utf-8'%3F%3E%3C!DOCTYPE svg PUBLIC '-//W3C//DTD SVG 1.1//EN' 'http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd'%3E%3Csvg version='1.1' id='Ebene_1' xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink' x='0px' y='0px' width='595.275px' height='595.275px' viewBox='200 215 230 470' xml:space='preserve'%3E%3Ccircle style='fill:%23F44336;' cx='299.76' cy='439.067' r='218.516'/%3E%3Cg%3E%3Crect x='267.162' y='307.978' transform='matrix(0.7071 -0.7071 0.7071 0.7071 -222.6202 340.6915)' style='fill:white;' width='65.545' height='262.18'/%3E%3Crect x='266.988' y='308.153' transform='matrix(0.7071 0.7071 -0.7071 0.7071 398.3889 -83.3116)' style='fill:white;' width='65.544' height='262.179'/%3E%3C/g%3E%3C/svg%3E"; // tu SVG codificado
 const contextMenu = document.getElementById('context-menu');
 const textToolbar = document.getElementById('text-toolbar');
 const imageToolbar = document.getElementById('image-toolbar');
@@ -536,9 +535,7 @@ function loadFonts(list) {
     });
     return Promise.all(fontPromises);
 }
-
-loadFonts(fonts).then(() => console.log('Fuentes listas.'));
-
+loadFonts(fonts).then(() => { console.log("Fuentes cargadas correctamente"); });
 // ——— Agregar Texto ———
 function addText() {
     const text = new fabric.IText('Texto', {
@@ -1105,6 +1102,8 @@ fabric.Object.prototype.controls.deleteControl = new fabric.Control({
     offsetY: -10,
     offsetX: 10,
     cursorStyle: 'pointer',
+    sizeX: 25,   // ancho
+    sizeY: 25,   // alto
     mouseUpHandler: function(eventData, transform) {
         const target = transform.target;
         const canvas = target.canvas || transform.canvas; // asegurar acceso al canvas
@@ -1115,16 +1114,64 @@ fabric.Object.prototype.controls.deleteControl = new fabric.Control({
         return true;
     },
     render: function(ctx, left, top, styleOverride, fabricObject) {
-        const size = 20; // tamaño del ícono
-        const img = new Image();
-        img.src = deleteIcon;
-        ctx.drawImage(img, left - size/2, top - size/2, size, size);
+        const size = 24; // tamaño del emoji
+        ctx.font = `${size}px sans-serif`;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+
+        ctx.fillText("❎", left, top);  // <<<<<< AQUI VA TU EMOJI
     }
 });
+fabric.Object.prototype.controls.br = new fabric.Control({
+    x: 0.5,
+    y: 0.5,
+    offsetX: 10,
+    offsetY: 18,
+    cursorStyle: 'se-resize', // cursor de escala
+    sizeX: 25,   // ancho
+    sizeY: 25,   // alto
 
-// Activar controles extendidos
+    render: function(ctx, left, top, styleOverride, fabricObject) {
+        const size = 24; // tamaño del emoji
+        ctx.font = `${size}px sans-serif`;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+
+        ctx.fillText("↘️", left, top);  // <<<<<< AQUI VA TU EMOJI
+    },
+
+    actionHandler: fabric.controlsUtils.scalingEqually,
+});
+
+fabric.Object.prototype.controls.rotateControl = new fabric.Control({
+    x: 0.0,
+    y: 0.5,
+    offsetX: 10,
+    offsetY: 18,
+    cursorStyle: 'pointer',
+    sizeX: 25,   // ancho
+    sizeY: 25,   // alto
+    render: function(ctx, left, top, styleOverride, fabricObject) {
+        const size = 24; // tamaño del emoji
+        ctx.font = `${size}px sans-serif`;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+
+        ctx.fillText("🔄", left, top);  // <<<<<< AQUI VA TU EMOJI
+    },
+
+    mouseUpHandler: function(eventData, transform) {
+        const target = transform.target;
+
+        // Rota 45 grados
+        target.rotate((target.angle || 0) + 45);
+
+        target.canvas.requestRenderAll();
+        return true;
+    }
+});
 canvases[selectedTab].on('object:added', (e) => {
-    e.target.setControlsVisibility({ mt: true, mb: true, ml: true, mr: true, bl: true, br: true, tl: true, tr: true, mtr: true, deleteControl: true });
+    e.target.setControlsVisibility({ mt: true, mb: false, ml: false, mr: false, bl: false, br: true, tl: false, tr: false, mtr: true, deleteControl: true, rotateControl: true, });
 });
 
 // ——— Exponer funciones globales si se usa inline en HTML ———
@@ -1218,3 +1265,172 @@ Object.values(canvases).forEach((canvas) => {
         if (e.touches.length < 2) lastDistance = 0;
     });
 });
+
+const designAreas = {
+    front: { x: 150, y: 100, width: 300, height: 400 },
+    back: { x: 150, y: 100, width: 300, height: 400 },
+    leftsleeve: { x: 200, y: 120, width: 200, height: 200 },
+    rightsleeve: { x: 200, y: 120, width: 200, height: 200 }
+};
+function drawDesignArea(section) {
+    const canvas = canvases[section];
+    const area = designAreas[section];
+
+    const rect = new fabric.Rect({
+        left: area.x,
+        top: area.y,
+        width: area.width,
+        height: area.height,
+        fill: 'rgba(0,0,0,0)',          // transparente
+        stroke: 'yellow',
+        strokeDashArray: [10, 5],
+        selectable: false,
+        evented: false
+    });
+
+    canvas.add(rect);
+    canvas.sendToBack(rect);
+}
+['front','back','leftsleeve','rightsleeve'].forEach(sec => {
+    loadBackground(sec, false);
+    drawDesignArea(sec);
+});
+
+// Referencia a la lista
+const elementsList = document.getElementById("elements-list");
+
+// Detectar objetos añadidos en cualquier canvas
+Object.keys(canvases).forEach((key) => {
+    const canvas = canvases[key];
+
+    canvas.on("object:added", (e) => {
+        const obj = e.target;
+        if (!obj || obj._skipList) return; // evita duplicados internos
+
+        addObjectToList(obj, key);
+    });
+});
+
+function addObjectToList(obj, canvasName) {
+    const li = document.createElement("li");
+    li.id = "item-" + obj.id;
+
+    li.innerHTML = `
+        <span><b>${obj.type === "i-text" ? "Texto" : "Imagen"}</b> (${canvasName})</span>
+        <div class="tools"></div>
+    `;
+
+    elementsList.appendChild(li);
+
+    const toolsContainer = li.querySelector(".tools");
+
+    // === SOLO PARA TEXTOS ===
+    if (obj.type === "i-text") {
+        toolsContainer.innerHTML = `
+            <div class="tool-group">
+                <textarea class="text-content" rows="3">${obj.text}</textarea>
+            </div>
+            <div class="tool-group">
+                <label>Color</label>
+                <input type="color" value="${obj.fill}" class="text-color">
+            </div>
+
+            <div class="tool-group">
+                <label>Tamaño</label>
+                <input type="number" value="${obj.fontSize}" min="10" max="999" class="text-size">
+            </div>
+
+            <div class="tool-group">
+                <label>Fuente</label>
+                <select class="text-font">
+                    <option value="Arial">Arial</option>
+                    <option value="VT323">VT323</option>
+                    <option value="Pacifico">Pacifico</option>
+                    <option value="Lato100">Lato (Light)</option>
+                    <option value="Lato900">Lato (Bold)</option>
+                    <option value="Playwrite AU SA">Playwrite AU SA</option>
+                    <option value="Tomorrow">Tomorrow</option>
+                    <option value="Roboto">Roboto</option>
+                    <option value="Montserrat">Montserrat</option>
+                    <option value="Open Sans">Open Sans</option>
+                    <option value="Oswald">Oswald</option>
+                    <option value="Raleway">Raleway</option>
+                    <option value="Merriweather">Merriweather</option>
+                    <option value="Dancing Script">Dancing Script</option>
+                    <option value="Bebas Neue">Bebas Neue</option>
+                </select>
+            </div>
+
+            <div class="tool-group">
+                <label>Borde</label>
+                <input type="color" value="${obj.stroke || "#000000"}" class="text-border">
+            </div>
+
+            <button class="delete-text">Eliminar</button>
+        `;
+        toolsContainer.querySelector(".text-content").addEventListener("input", (e) => {
+            obj.set("text", e.target.value);
+            canvases[canvasName].renderAll();
+        });
+        // --- CONTROL DE COLOR ---
+        toolsContainer.querySelector(".text-color").addEventListener("input", (e) => {
+            obj.set("fill", e.target.value);
+            canvases[canvasName].renderAll();
+        });
+
+        // --- CONTROL DE TAMAÑO ---
+        toolsContainer.querySelector(".text-size").addEventListener("input", (e) => {
+            obj.set("fontSize", parseInt(e.target.value));
+            canvases[canvasName].renderAll();
+        });
+
+        // --- CONTROL DE FUENTE ---
+        toolsContainer.querySelector(".text-font").addEventListener("change", async (e) => {
+            const newFont = e.target.value;
+
+            try {
+                await document.fonts.load(`16px "${newFont}"`);  
+                obj.set("fontFamily", newFont);
+                obj.initDimensions();
+                canvases[canvasName].renderAll();
+            } catch (err) {
+                console.error("Error aplicando fuente:", newFont, err);
+            }
+        });
+
+        // --- CONTROL DE BORDE ---
+        toolsContainer.querySelector(".text-border").addEventListener("input", (e) => {
+            obj.set({
+                stroke: e.target.value,
+                strokeWidth: 2
+            });
+            canvases[canvasName].renderAll();
+        });
+
+        // --- BOTÓN ELIMINAR ---
+        toolsContainer.querySelector(".delete-text").addEventListener("click", () => {
+            canvases[canvasName].remove(obj);
+            canvases[canvasName].renderAll();
+            li.remove();
+        });
+    }
+
+    // === PARA IMÁGENES (opciones básicas) ===
+    else {
+        toolsContainer.innerHTML = `
+            <button class="select-btn">Seleccionar</button>
+            <button class="delete-btn">Eliminar</button>
+        `;
+
+        toolsContainer.querySelector(".select-btn").addEventListener("click", () => {
+            canvases[canvasName].setActiveObject(obj);
+            canvases[canvasName].renderAll();
+        });
+
+        toolsContainer.querySelector(".delete-btn").addEventListener("click", () => {
+            canvases[canvasName].remove(obj);
+            canvases[canvasName].renderAll();
+            li.remove();
+        });
+    }
+}
