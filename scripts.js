@@ -504,8 +504,6 @@ function switchTab(tab) {
         const container = document.getElementById(`${section}-canvas-container`);
         if (container) container.style.display = (section === tab) ? 'flex' : 'none';
     });
-
-    hideContextMenu();
     updateMiniMap();
 }
 
@@ -537,6 +535,12 @@ function loadFonts(list) {
 }
 loadFonts(fonts).then(() => { console.log("Fuentes cargadas correctamente"); });
 // ——— Agregar Texto ———
+let objectCounter = 0;
+
+function generateObjectId() {
+    objectCounter++;
+    return "obj-" + objectCounter;
+}
 function addText() {
     const text = new fabric.IText('Texto', {
         fontFamily: 'Arial',
@@ -549,7 +553,9 @@ function addText() {
         cornerSize: 8,
         transparentCorners: false,
     });
+    text.id = generateObjectId();
     canvases[selectedTab].add(text);
+    addObjectToList(text, selectedTab);
 
     const message = document.getElementById('text-message');
     if (message) {
@@ -620,10 +626,11 @@ function addImage() {
                 // Centrar
                 img.left = (canvas.width - img.width * scale) / 2;
                 img.top = (canvas.height - img.height * scale) / 2.5;
-
+                img.id = generateObjectId();
                 canvas.add(img);
                 canvas.setActiveObject(img); // opcional, selecciona la imagen
                 canvas.renderAll();
+                addObjectToList(img, selectedTab);
 
                 uploadImageToServer(file); // opcional, requiere backend
             };
@@ -678,38 +685,6 @@ function uploadImage() {
     reader.readAsDataURL(file);
 }
 
-// ——— Menú contextual ———
-function showContextMenu(pointer, canvasEl) {
-    const canvas = canvases[selectedTab];
-    const active = canvas.getActiveObject();
-    if (!active) return;
-
-    contextMenu.style.display = 'contents';
-
-    // Muestra la barra correspondiente
-    if (active.type === 'i-text') {
-        textToolbar.style.display = 'flex';
-        imageToolbar.style.display = 'none';
-        // precargar valores
-        const tc = document.getElementById('text-color');
-        const ts = document.getElementById('text-size');
-        const tf = document.getElementById('text-font');
-        if (tc) tc.value = active.fill || '#000000';
-        if (ts) ts.value = active.fontSize || 24;
-        if (tf) tf.value = active.fontFamily || 'Arial';
-    } else if (active.type === 'image') {
-        textToolbar.style.display = 'none';
-        imageToolbar.style.display = 'flex';
-    }
-}
-
-function hideContextMenu() { contextMenu.style.display = 'none'; }
-
-function deleteSelectedObject() {
-    const active = canvases[selectedTab].getActiveObject();
-    if (active) canvases[selectedTab].remove(active);
-}
-
   // ——— Eventos por lienzo ———
 Object.keys(canvases).forEach((key) => {
     const canvas = canvases[key];
@@ -719,11 +694,6 @@ Object.keys(canvases).forEach((key) => {
         if (key !== selectedTab) return;
         const pointer = canvas.getPointer(e.e);
         const active = canvas.getActiveObject();
-        if (active && (active.type === 'i-text' || active.type === 'image')) {
-            showContextMenu(pointer, canvasEl);
-        } else {
-            hideContextMenu();
-        }
     });
 
     canvas.on('selection:created', () => {
@@ -731,7 +701,6 @@ Object.keys(canvases).forEach((key) => {
         const active = canvas.getActiveObject();
         if (!active) return;
         const pointer = { x: active.left || 0, y: active.top || 0 };
-        showContextMenu(pointer, canvasEl);
     });
 
     canvas.on('selection:updated', () => {
@@ -739,35 +708,34 @@ Object.keys(canvases).forEach((key) => {
         const active = canvas.getActiveObject();
         if (!active) return;
         const pointer = { x: active.left || 0, y: active.top || 0 };
-        showContextMenu(pointer, canvasEl);
     });
 
     canvas.on('selection:cleared', () => {
         if (key !== selectedTab) return;
-        hideContextMenu();
+        //hideContextMenu();
     });
     canvas.on('object:scaling', function (e) {
-    const obj = e.target;
+        const obj = e.target;
 
-    if (obj && obj.type === 'i-text') {
-        const originalFont = obj.fontSize; 
-        const newFont = originalFont * obj.scaleX; 
+        if (obj && obj.type === 'i-text') {
+            const originalFont = obj.fontSize; 
+            const newFont = originalFont * obj.scaleX; 
 
-        // Actualizar el input ID=text-size
-        const ts = document.getElementById('text-size');
-        if (ts) ts.value = Math.round(newFont);
+            // Actualizar el input ID=text-size
+            const ts = document.getElementById('text-sizeEl');
+            if (ts) ts.value = Math.round(newFont);
 
-        // Aplicar el nuevo fontSize al texto
-        obj.fontSize = newFont;
+            // Aplicar el nuevo fontSize al texto
+            obj.fontSize = newFont;
 
-        // Resetear escalado para evitar distorsión
-        obj.scaleX = 1;
-        obj.scaleY = 1;
+            // Resetear escalado para evitar distorsión
+            obj.scaleX = 1;
+            obj.scaleY = 1;
 
-        canvas.requestRenderAll();
-    }
-});
-
+            canvas.requestRenderAll();
+        }
+    });
+    
 });
 
   // ——— Mini-mapa ———
@@ -928,9 +896,7 @@ function drawViewportIndicator(mainCanvas, miniCanvas, scale, offsetX, offsetY, 
         const visibleHeight = mainCanvas.height / zoom;
         
         // Eliminar indicador anterior
-        const existingIndicator = miniCanvas.getObjects().find(obj => 
-            obj.isViewportIndicator === true
-        );
+        const existingIndicator = miniCanvas.getObjects().find(obj => obj.isViewportIndicator);
         if (existingIndicator) {
             miniCanvas.remove(existingIndicator);
         }
@@ -954,55 +920,59 @@ function drawViewportIndicator(mainCanvas, miniCanvas, scale, offsetX, offsetY, 
         
         miniCanvas.add(indicator);
         miniCanvas.bringToFront(indicator);
-        
-        miniCanvas.on("object:added", () => {
-            const indicator = miniCanvas.getObjects().find(obj => obj.isViewportIndicator);
-            if (indicator) {
-                miniCanvas.bringToFront(indicator);
-            }
-        });
 
     } catch (error) {
         console.error('Error dibujando indicador:', error);
     }
 }
-
+let isDraggingMiniMap = false;
 // Actualizar el evento de click en el minimapa para navegación
 miniMapCanvas.on("mouse:down", function (e) {
+    isDraggingMiniMap = true;
+    moveViewportFromMinimap(e); // ya centra el viewport
+});
+
+miniMapCanvas.on("mouse:move", function (e) {
+    if (isDraggingMiniMap) {
+        moveViewportFromMinimap(e);
+    }
+});
+
+miniMapCanvas.on("mouse:up", function () {
+    isDraggingMiniMap = false;
+});
+
+function moveViewportFromMinimap(e) {
     const main = canvases[selectedTab];
     const pointer = miniMapCanvas.getPointer(e.e);
-    
-    // Dimensiones del canvas principal y minimapa
+
     const mainWidth = main.width;
     const mainHeight = main.height;
     const miniWidth = miniMapCanvas.width;
     const miniHeight = miniMapCanvas.height;
-    
-    // Calcular escala
+
+    // escalar como ya hacías
     const scaleX = miniWidth / mainWidth;
     const scaleY = miniHeight / mainHeight;
     const scale = Math.min(scaleX, scaleY);
-    
-    // Calcular offset
+
     const offsetX = (miniWidth - mainWidth * scale) / 2;
     const offsetY = (miniHeight - mainHeight * scale) / 2;
-    
-    // Convertir coordenadas del minimapa al canvas principal
+
     const mainX = (pointer.x - offsetX) / scale;
     const mainY = (pointer.y - offsetY) / scale;
-    
-    // Obtener zoom actual
+
     const zoom = main.getZoom();
-    
-    // Centrar el viewport en el punto clickeado
+
     const vpt = main.viewportTransform;
     vpt[4] = -mainX * zoom + main.width / 2;
     vpt[5] = -mainY * zoom + main.height / 2;
-    
+
     main.setViewportTransform(vpt);
     main.renderAll();
-    updateMiniMap(); // Actualizar el indicador de viewport
-});
+
+    updateMiniMap(); // redibujar el rectángulo del viewport
+}
 
 // Llamar a updateMiniMap cuando se modifique el canvas
 Object.keys(canvases).forEach((key) => {
@@ -1111,6 +1081,10 @@ fabric.Object.prototype.controls.deleteControl = new fabric.Control({
             canvas.remove(target);
             canvas.requestRenderAll();
         }
+        if (target._listId) {
+            const li = document.getElementById(target._listId);
+            if (li) li.remove();
+        }
         return true;
     },
     render: function(ctx, left, top, styleOverride, fabricObject) {
@@ -1118,7 +1092,6 @@ fabric.Object.prototype.controls.deleteControl = new fabric.Control({
         ctx.font = `${size}px sans-serif`;
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
-
         ctx.fillText("❎", left, top);  // <<<<<< AQUI VA TU EMOJI
     }
 });
@@ -1186,7 +1159,6 @@ Object.assign(window, {
     addImage,
     uploadImage,
     updateImageBorder,
-    deleteSelectedObject,
     scrollToFeatures,
     zoomIn,
     zoomOut,
@@ -1296,31 +1268,36 @@ function drawDesignArea(section) {
     drawDesignArea(sec);
 });
 
-// Referencia a la lista
-const elementsList = document.getElementById("elements-list");
-
-// Detectar objetos añadidos en cualquier canvas
-Object.keys(canvases).forEach((key) => {
-    const canvas = canvases[key];
-
-    canvas.on("object:added", (e) => {
-        const obj = e.target;
-        if (!obj || obj._skipList) return; // evita duplicados internos
-
-        addObjectToList(obj, key);
-    });
-});
+const canvasLists = {
+    "front": document.getElementById("elements-front"),
+    "back": document.getElementById("elements-back"),
+    "leftsleeve": document.getElementById("elements-leftsleeve"),
+    "rightsleeve": document.getElementById("elements-rightsleeve")
+};
 
 function addObjectToList(obj, canvasName) {
+    const list = canvasLists[canvasName]; // ⬅️ lista correcta
+    if (!list) return;
+
+    obj._canvasName = canvasName;
+
     const li = document.createElement("li");
-    li.id = "item-" + obj.id;
+    obj._listId = "item-" + obj.id; // evita undefined y duplicados
+    li.id = obj._listId;
+
+    let labelHTML = "";
+    if (obj.type === "i-text") {
+        labelHTML = `<span><b>Texto :(${canvasName})</b><textarea class="text-content" rows="10" cols="18">${obj.text}</textarea></span>`;
+    } else {
+        labelHTML = `<span><b>Imagen</b> (${canvasName})</span>`;
+    }
 
     li.innerHTML = `
-        <span><b>${obj.type === "i-text" ? "Texto" : "Imagen"}</b> (${canvasName})</span>
+        ${labelHTML}
         <div class="tools"></div>
     `;
 
-    elementsList.appendChild(li);
+    list.appendChild(li);
 
     const toolsContainer = li.querySelector(".tools");
 
@@ -1328,20 +1305,17 @@ function addObjectToList(obj, canvasName) {
     if (obj.type === "i-text") {
         toolsContainer.innerHTML = `
             <div class="tool-group">
-                <textarea class="text-content" rows="3">${obj.text}</textarea>
-            </div>
-            <div class="tool-group">
-                <label>Color</label>
+                <div class="tool-label"><i class="material-icons">format_color_text</i> Color</div>
                 <input type="color" value="${obj.fill}" class="text-color">
             </div>
 
             <div class="tool-group">
-                <label>Tamaño</label>
-                <input type="number" value="${obj.fontSize}" min="10" max="999" class="text-size">
+                <div class="tool-label"><i class="material-icons">text_fields</i> Tamaño <span class="text-size-value">${obj.fontSize}px</span></div>
+                <input type="range" value="${obj.fontSize}" min="10" max="200" class="text-size" id="text-sizeEl">
             </div>
 
             <div class="tool-group">
-                <label>Fuente</label>
+                <div class="tool-label"><i class="material-icons">font_download</i> Fuente</div>
                 <select class="text-font">
                     <option value="Arial">Arial</option>
                     <option value="VT323">VT323</option>
@@ -1362,13 +1336,13 @@ function addObjectToList(obj, canvasName) {
             </div>
 
             <div class="tool-group">
-                <label>Borde</label>
+                <div class="tool-label"><i class="material-icons">border_color</i> Borde</div>
                 <input type="color" value="${obj.stroke || "#000000"}" class="text-border">
             </div>
 
-            <button class="delete-text">Eliminar</button>
+            <button class="dlt delete-text">Eliminar</button>
         `;
-        toolsContainer.querySelector(".text-content").addEventListener("input", (e) => {
+        li.querySelector(".text-content").addEventListener("input", (e) => {
             obj.set("text", e.target.value);
             canvases[canvasName].renderAll();
         });
@@ -1379,8 +1353,17 @@ function addObjectToList(obj, canvasName) {
         });
 
         // --- CONTROL DE TAMAÑO ---
-        toolsContainer.querySelector(".text-size").addEventListener("input", (e) => {
-            obj.set("fontSize", parseInt(e.target.value));
+        const sizeSlider = toolsContainer.querySelector(".text-size");
+        const sizeText = toolsContainer.querySelector(".text-size-value");
+
+        sizeSlider.addEventListener("input", (e) => {
+            const newSize = parseInt(e.target.value);
+
+            obj.set("fontSize", newSize);
+            obj.initDimensions();
+
+            sizeText.textContent = newSize + "px"; // ← actualiza el texto al lado del slider
+
             canvases[canvasName].renderAll();
         });
 
@@ -1409,8 +1392,9 @@ function addObjectToList(obj, canvasName) {
 
         // --- BOTÓN ELIMINAR ---
         toolsContainer.querySelector(".delete-text").addEventListener("click", () => {
-            canvases[canvasName].remove(obj);
-            canvases[canvasName].renderAll();
+            const realCanvas = canvases[obj._canvasName];
+            realCanvas.remove(obj);
+            realCanvas.renderAll();
             li.remove();
         });
     }
