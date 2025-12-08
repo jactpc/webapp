@@ -28,10 +28,10 @@ button, .tab, .controlsbtn, .size-button, .color-button {
 }
 
 /* ======== Contenedores ======== */
-.color-buttons, .size-buttons, .tabs, .toolbar {
+.color-buttons, .size-buttons, .tabs {
   display: flex;
   gap: 10px;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   justify-content: center;
   margin: 10px 0;
 }
@@ -126,12 +126,13 @@ button, .tab, .controlsbtn, .size-button, .color-button {
   border: 1px solid #ddd;
   border-radius: 10px;
   width: 100%;
-  margin: 20px 0;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
 }
 
 /* ======== Mini map y zoom ======== */
 .mini-map-container {
-  position: absolute;
+  width: 175px;
+  position: fixed;
   bottom: 9px;
   right: 10px;
   border: 2px solid #ddd;
@@ -218,6 +219,8 @@ button, .tab, .controlsbtn, .size-button, .color-button {
 @media (min-width: 768px) {
   .color-button, .size-button { font-size: 18px; }
   .size-button .quantity { font-size: 26px; }
+  .canvas-left{ width: 65%;}
+  .canvas-right{ width: 35%;}
 }
 @media (max-width: 768px) {
   .color-button { width: 50px; height: 50px; }
@@ -227,14 +230,18 @@ button, .tab, .controlsbtn, .size-button, .color-button {
   .hero p { font-size: 1em; }
   .hero button { font-size: 0.9em; }
   #preview-container div canvas { width: 160px; height: 220px; }
+  .editor-container{flex-direction: column;align-items: center;}
+  .canvas-left{ width: 80%;}
+  .canvas-right{ width: 80%;}
 }
 @media (max-width: 425px) {
-  .canvas-container { max-height: 483px; }
+  .canvas-container { max-height: 380px; }
   .canvas-controls { bottom: 5px; left: 5px; }
   .size-button { font-size: 10px; width: 40px; }
   .feature-card { width: 99vw; }
   .tab { font-size: 15px; }
   .feature-card {padding: 10px;}
+  
 }
 #preview-container {
   display: flex;
@@ -409,18 +416,26 @@ button, .tab, .controlsbtn, .size-button, .color-button {
     }
     
     .save-notification {
-      position: fixed;
-      top: 20px;
-      right: 20px;
-      background-color: #2ECC71;
-      color: white;
-      padding: 12px 20px;
-      border-radius: 8px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-      display: none;
-      z-index: 1000;
-      animation: slideInRight 0.3s ease;
+    display: none;
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    padding: 12px 18px;
+    border-radius: 6px;
+    font-size: 14px;
+    color: #fff;
+    font-weight: bold;
+    box-shadow: 0px 3px 6px rgba(0,0,0,0.2);
+    z-index: 9999;
+    opacity: 0;
+    transition: opacity 0.3s ease;
     }
+
+    /* Colores según tipo */
+    .notify-success   { background-color: #28a745; }
+    .notify-error     { background-color: #dc3545; }
+    .notify-warning   { background-color: #ffc107; color: #333; }
+    .notify-info      { background-color: #17a2b8; }
     
     @keyframes slideInRight {
       from { transform: translateX(100%); opacity: 0; }
@@ -447,17 +462,6 @@ button, .tab, .controlsbtn, .size-button, .color-button {
       border-left: 4px solid #4A90E2;
     }
     .hidden { display: none; }
-
-/* ====== TOOLBAR ADOBE ====== */
-.toolbar {
-  display: flex;
-  flex-direction: row;
-  gap: 18px;
-  flex-wrap: nowrap;
-  align-items: flex-end;
-  overflow-x: auto;
-  padding: 20px 52px 20px 160px;
-}
 
 /* ====== CADA GRUPO ====== */
 .tool-group {
@@ -521,12 +525,7 @@ button.dlt:hover {
     gap: 20px;
 }
 
-.canvas-left {
-    width: 65%;
-}
-
 .canvas-right {
-    width: 35%;
     background: #f5f5f5;
     padding: 15px;
     border-radius: 10px;
@@ -542,8 +541,175 @@ button.dlt:hover {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    animation: fadeIn 0.5s ease;
 }
 
 .elements-list button {
     margin-left: 8px;
+}
+/* Fondo modal */
+.emoji-modal {
+    display: none;
+    position: fixed;
+    z-index: 9999;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.6);
+    backdrop-filter: blur(4px);
+}
+
+/* Caja interna */
+.emoji-content {
+    background: white;
+    width: 90%;
+    max-width: 520px;
+    margin: 70px auto;
+    padding: 20px;
+    border-radius: 14px;
+    box-shadow: 0 0 20px rgba(0,0,0,0.4);
+}
+
+/* Botón cerrar */
+.close-emoji {
+    float: right;
+    font-size: 28px;
+    cursor: pointer;
+}
+
+/* Tabs */
+.emoji-tabs {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 12px;
+}
+
+.emoji-tab {
+    flex: 1;
+    padding: 8px;
+    border: none;
+    background: #e0e0e0;
+    cursor: pointer;
+    border-radius: 6px;
+    font-size: 14px;
+}
+
+.emoji-tab.active {
+    background: #4a90e2;
+    color: white;
+}
+
+/* Grid */
+.emoji-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, 50px);
+    gap: 10px;
+    justify-content: center;
+    padding: 10px;
+}
+
+/* Scroll */
+.scrollable {
+    max-height: 300px;
+    overflow-y: scroll;
+}
+
+/* Emoji */
+.emoji-grid span {
+    font-size: 32px;
+    cursor: pointer;
+    text-align: center;
+    transition: 0.2s;
+}
+
+.emoji-grid span:hover {
+    transform: scale(1.3);
+}
+.li-image-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.thumbnail-img {
+    min-width: 45px;
+    height: 75px;
+    object-fit: cover;
+    border-radius: 6px;
+    border: 1px solid #ddd;
+    font-size: 59px;
+}
+/* Títulos generales */
+.panel-title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: bold;
+}
+
+.panel-desc {
+  margin-top: -5px;
+  font-size: 13px;
+  color: #555;
+}
+
+/* ====== Canvas Controls con título + descripción ====== */
+.tool-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-right: 8px;
+}
+
+.tool-title {
+  font-size: 12px;
+  font-weight: bold;
+  color: #444;
+}
+
+.tool-desc {
+  font-size: 10px;
+  color: #777;
+  margin-bottom: 4px;
+}
+
+/* ====== Tabs con título + descripción ====== */
+.tab {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 6px 12px;
+  justify-content: center;
+}
+
+.tab-title {
+  font-size: 14px;
+  font-weight: bold;
+}
+
+.tab-desc {
+  font-size: 10px;
+  color: #efefef;
+  margin-top: -2px;
+}
+
+/* ====== List titles ====== */
+.list-title {
+  margin-top: 15px;
+  margin-bottom: 5px;
+  font-size: 16px;
+  font-weight: bold;
+}
+
+.list-desc {
+  font-size: 12px;
+  color: #555;
+  margin-top: -5px;
+}
+.canvas-controls{
+  display: flex;
+    justify-content: center;
+}
+.btnzoom{
+  cursor: pointer;
 }

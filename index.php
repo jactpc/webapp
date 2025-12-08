@@ -75,56 +75,72 @@
     <div class="feature-card" id="step3-content">
       <h3>Paso 3: Personaliza tu Camiseta</h3>
       <p>Agrega texto, imágenes o logos de tu preferencia.</p>
-      <div class="tabs">
-        <div class="tab active" data-tab="front" onclick="switchTab('front')">Pecho</div>
-        <div class="tab" data-tab="back" onclick="switchTab('back')">Espalda</div>
-        <div class="tab" data-tab="leftsleeve" onclick="switchTab('leftsleeve')">Manga Izq.</div>
-        <div class="tab" data-tab="rightsleeve" onclick="switchTab('rightsleeve')">Manga Der.</div>
-      </div>
-      <div id="text-message" style="display: none;">¡Texto agregado!</div>
-      <div class="controls">
-        <div id="context-menu" class="context-menu" style="display:none;">
-          
-        </div>
-      </div>
       <div class="editor-container">
         <div class="canvas-left">
           <div class="canvas-container tshit_container" id="front-canvas-container">
             <canvas id="front-canvas" width="620" height="800"></canvas>
           </div>
-          <div class="canvas-container tshit_container" id="back-canvas-container" style="display:none;">
+          <div class="canvas-container tshit_container hidden" id="back-canvas-container">
             <canvas id="back-canvas" width="620" height="800"></canvas>
           </div>
-          <div class="canvas-container tshit_container" id="leftsleeve-canvas-container" style="display:none;">
+          <div class="canvas-container tshit_container hidden" id="leftsleeve-canvas-container">
             <canvas id="leftsleeve-canvas" width="620" height="800"></canvas>
           </div>
-          <div class="canvas-container tshit_container" id="rightsleeve-canvas-container" style="display:none;">
+          <div class="canvas-container tshit_container hidden" id="rightsleeve-canvas-container">
             <canvas id="rightsleeve-canvas" width="620" height="800"></canvas>
           </div>
           <div class="mini-map-container">
-            <button id="zoom-in" onclick="zoomIn()">➕</button>
-            <button id="zoom-out" onclick="zoomOut()">➖</button>
-            <button id="reset-zoom" onclick="resetZoom()">🔄</button>
+            <i class="material-icons btnzoom" onclick="zoomOut()">zoom_out</i>
+              <input style="width: 79px;" id="zoom-slider" type="range" min="0.2" max="4" step="0.01" value="1" class="zoom-slider">
+            <i class="material-icons btnzoom" onclick="zoomIn()">zoom_in</i>
+            <i class="material-icons btnzoom" id="reset-zoom" onclick="resetZoom()">open_with</i>
             <canvas id="mini-map" width="175" height="200"></canvas>
           </div>
         </div>
         <div class="canvas-right">
-          <div class="canvas-controls">
-            <button class="button controlsbtn" onclick="addText()">T</button>
-            <button class="button controlsbtn" onclick="addImage()">🖼️</button>
-            <button class="button controlsbtn" onclick="addEmoji()">😀</button>
+          <h2 class="panel-title">Ubicacion del estampado</h2>
+          <div class="tabs">
+            <div class="tab active" data-tab="front" onclick="switchTab('front')">
+              <span class="tab-title">Pecho</span>
+              <span class="tab-desc">Área frontal</span>
+            </div>
+            <div class="tab" data-tab="back" onclick="switchTab('back')">
+              <span class="tab-title">Espalda</span>
+              <span class="tab-desc">Zona trasera</span>
+            </div>
+            <div class="tab" data-tab="leftsleeve" onclick="switchTab('leftsleeve')">
+              <span class="tab-title">Manga Izq.</span>
+              <span class="tab-desc">Lado izquierdo</span>
+            </div>
+
+            <div class="tab" data-tab="rightsleeve" onclick="switchTab('rightsleeve')">
+              <span class="tab-title">Manga Der.</span>
+              <span class="tab-desc">Lado derecho</span>
+            </div>
           </div>
-          <h3>Elementos agregados - Front</h3>
-            <ul id="elements-front" class="elements-list"></ul>
-
-          <h3>Elementos agregados - Back</h3>
-            <ul id="elements-back" class="elements-list"></ul>
-
-          <h3>Elementos agregados - Left Sleeve</h3>
-            <ul id="elements-leftsleeve" class="elements-list"></ul>
-
-          <h3>Elementos agregados - Right Sleeve</h3>
-            <ul id="elements-rightsleeve" class="elements-list"></ul>
+          <h2 class="panel-title">Herramientas de Diseño</h2>
+          <div class="canvas-controls">
+            <div class="tool-wrapper">
+              <span class="tool-title">Texto</span>
+              <span class="tool-desc">Añade palabras o frases</span>
+              <button class="button controlsbtn" title="Agregar texto" onclick="addText()">T</button>
+            </div>
+            <div class="tool-wrapper">
+              <span class="tool-title">Imagen</span>
+              <span class="tool-desc">Sube una imagen PNG/JPG</span>
+              <button class="button controlsbtn" title="Agregar imagen" onclick="addImage()">🖼️</button>
+            </div>
+            <div class="tool-wrapper">
+              <span class="tool-title">Emoji</span>
+              <span class="tool-desc">Selecciona un emoji</span>
+              <button class="button controlsbtn" title="Agregar emoji" onclick="addEmoji()">😀</button>
+            </div>
+          </div>
+          <ul id="elements-front" class="elements-list"><h3 class="list-title" id="title-front">Elementos agregados – Pecho</h3>
+  <p class="list-desc" id="desc-front">Objetos colocados en la parte frontal.</p></ul>
+          <ul id="elements-back" class="elements-list hidden"><h3>Elementos agregados - Back</h3></ul>
+          <ul id="elements-leftsleeve" class="elements-list hidden"><h3>Elementos agregados - Left Sleeve</h3></ul>
+          <ul id="elements-rightsleeve" class="elements-list hidden"><h3>Elementos agregados - Right Sleeve</h3></ul>
         </div>
       </div>
       <div class="step-validation" id="step3-validation">Puedes personalizar tu diseño o continuar con el diseño básico</div>
@@ -197,15 +213,26 @@
     </div>
   </div>
   <!-- Save Notification -->
-  <div class="save-notification" id="save-notification">
-    ¡Progreso guardado automáticamente!
-  </div>
+  <div class="save-notification" id="save-notification"></div>
 
   <input type="file" id="image-input" style="display: none;" accept="image/*" onchange="uploadImage()">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/4.5.0/fabric.min.js"></script>
   
   <div class="footer">
     <p>© 2025 JACTPCL Diseñador de Poleras. Todos los derechos reservados.</p>
+  </div>
+  <div id="emojiModal" class="emoji-modal">
+    <div class="emoji-content">
+      <span class="close-emoji" onclick="closeEmojiModal()">×</span>
+      <h3>Selecciona un Emoji</h3>
+      <div class="emoji-tabs">
+            <button class="emoji-tab active" data-cat="faces">😀 Caritas</button>
+            <button class="emoji-tab" data-cat="animals">🐶 Animales</button>
+            <button class="emoji-tab" data-cat="objects">🔥 Objetos</button>
+            <button class="emoji-tab" data-cat="flags">🇨🇱 Países</button>
+      </div>
+      <div id="emojiGrid" class="emoji-grid scrollable"></div>
+    </div>
   </div>
 </body>
 </html>

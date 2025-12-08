@@ -166,7 +166,7 @@ function selectColor(color, element) {
 
     // Actualizar resumen
     updateProgressSummary();
-    showSaveNotification();
+    showNotification("¡Progreso guardado automáticamente!", "success");
 }
 
 // ========== PASO 2: SELECCIÓN DE TALLAS ==========
@@ -206,7 +206,7 @@ function setupSizeQuantityEvents() {
                 button.classList.add("active");
                 // Ocultar mensaje de validación
                 document.getElementById('step2-validation').style.display = 'none';
-                showSaveNotification();
+                showNotification("¡Progreso guardado automáticamente!", "success");
             } else {
                 span.style.color = "black";
                 button.classList.remove("active");
@@ -319,12 +319,29 @@ function updateFinalSummary() {
     updatePreviews();
 }
 
+function showNotification(message, type = "info", duration = 3000) {
+    const notification = document.getElementById("save-notification");
 
-function showSaveNotification() {
-    const notification = document.getElementById('save-notification');
-    notification.style.display = 'block';
+    // Limpiar clases anteriores
+    notification.className = "save-notification";
 
-    setTimeout(() => { notification.style.display = 'none'; }, 3000);
+    // Agregar tipo
+    notification.classList.add(`notify-${type}`);
+
+    // Cambiar mensaje
+    notification.innerHTML = message;
+
+    // Mostrar
+    notification.style.display = "block";
+    setTimeout(() => notification.style.opacity = "1", 10);
+
+    // Ocultar automáticamente
+    setTimeout(() => {
+        notification.style.opacity = "0";
+        setTimeout(() => {
+            notification.style.display = "none";
+        }, 300);
+    }, duration);
 }
 
 // ========== FUNCIÓN FINALIZAR ==========
@@ -395,12 +412,6 @@ function changeTshirtColor(color, element) {
 
     if (element) element.classList.add("active");
 }
-
-
-// ——— DOM fijos ———
-const contextMenu = document.getElementById('context-menu');
-const textToolbar = document.getElementById('text-toolbar');
-const imageToolbar = document.getElementById('image-toolbar');
 
 // ——— Canvases (uno por sección) ———
 const canvases = {
@@ -477,7 +488,12 @@ function restoreSection(section) {
 
 // ——— Inicialización de fondos ———
 ['front','back','leftsleeve','rightsleeve'].forEach(sec => loadBackground(sec, false));
-
+const canvasLists = {
+    "front": document.getElementById("elements-front"),
+    "back": document.getElementById("elements-back"),
+    "leftsleeve": document.getElementById("elements-leftsleeve"),
+    "rightsleeve": document.getElementById("elements-rightsleeve")
+};
 // ——— Cambio de pestaña ———
 function switchTab(tab) {
     if (!tab || !canvases[tab]) {
@@ -503,6 +519,12 @@ function switchTab(tab) {
     Object.keys(canvases).forEach(section => {
         const container = document.getElementById(`${section}-canvas-container`);
         if (container) container.style.display = (section === tab) ? 'flex' : 'none';
+    });
+    // Mostrar SOLO la lista de elementos del canvas actual
+    Object.keys(canvasLists).forEach(section => {
+        if (canvasLists[section]) {
+            canvasLists[section].style.display = (section === tab) ? "block" : "none";
+        }
     });
     updateMiniMap();
 }
@@ -555,13 +577,8 @@ function addText() {
     });
     text.id = generateObjectId();
     canvases[selectedTab].add(text);
-    addObjectToList(text, selectedTab);
-
-    const message = document.getElementById('text-message');
-    if (message) {
-        message.style.display = 'block';
-        setTimeout(() => (message.style.display = 'none'), 2000);
-    }
+    addObjectToList(text, true, selectedTab);
+    showNotification("¡Texto agregado!", "success");
 }
 
 function updateTextFont() {
@@ -630,9 +647,10 @@ function addImage() {
                 canvas.add(img);
                 canvas.setActiveObject(img); // opcional, selecciona la imagen
                 canvas.renderAll();
-                addObjectToList(img, selectedTab);
+                addObjectToList(img, false, selectedTab);
 
                 uploadImageToServer(file); // opcional, requiere backend
+                showNotification("Imagen agregada!", "success");
             };
         };
         reader.readAsDataURL(file);
@@ -994,19 +1012,36 @@ switchTab = function(tab) {
 };
 
 
-// ——— Zoom ———
+const zoomSlider = document.getElementById("zoom-slider");
+function syncZoomSlider() {
+    const canvas = canvases[selectedTab];
+    zoomSlider.value = canvas.getZoom().toFixed(2);
+}
 function zoomIn() {
     const canvas = canvases[selectedTab];
     const zoom = canvas.getZoom() * 1.2;
     canvas.zoomToPoint({ x: canvas.width / 2, y: canvas.height / 2 }, zoom);
+    syncZoomSlider();
 }
 
 function zoomOut() {
     const canvas = canvases[selectedTab];
     const zoom = canvas.getZoom() / 1.2;
     canvas.zoomToPoint({ x: canvas.width / 2, y: canvas.height / 2 }, zoom);
+    syncZoomSlider();
 }
+zoomSlider.addEventListener("input", function () {
+    const canvas = canvases[selectedTab];
+    const newZoom = parseFloat(this.value);
 
+    canvas.zoomToPoint(
+        { x: canvas.width / 2, y: canvas.height / 2 },
+        newZoom
+    );
+
+    canvas.requestRenderAll();
+    updateMiniMap();
+});
 function resetZoom() {
     const canvas = canvases[selectedTab];
     canvas.setViewportTransform([1, 0, 0, 1, 0, 0]);
@@ -1084,6 +1119,7 @@ fabric.Object.prototype.controls.deleteControl = new fabric.Control({
         if (target._listId) {
             const li = document.getElementById(target._listId);
             if (li) li.remove();
+            showNotification(`Elemento eliminado en ${selectedTab} correctamente`, "warning");
         }
         return true;
     },
@@ -1232,10 +1268,6 @@ Object.values(canvases).forEach((canvas) => {
             canvas.renderAll();
         }
     });
-
-    canvasEl.addEventListener('touchend', function(e) {
-        if (e.touches.length < 2) lastDistance = 0;
-    });
 });
 
 const designAreas = {
@@ -1268,14 +1300,7 @@ function drawDesignArea(section) {
     drawDesignArea(sec);
 });
 
-const canvasLists = {
-    "front": document.getElementById("elements-front"),
-    "back": document.getElementById("elements-back"),
-    "leftsleeve": document.getElementById("elements-leftsleeve"),
-    "rightsleeve": document.getElementById("elements-rightsleeve")
-};
-
-function addObjectToList(obj, canvasName) {
+function addObjectToList(obj, istext, canvasName) {
     const list = canvasLists[canvasName]; // ⬅️ lista correcta
     if (!list) return;
 
@@ -1286,10 +1311,24 @@ function addObjectToList(obj, canvasName) {
     li.id = obj._listId;
 
     let labelHTML = "";
-    if (obj.type === "i-text") {
-        labelHTML = `<span><b>Texto :(${canvasName})</b><textarea class="text-content" rows="10" cols="18">${obj.text}</textarea></span>`;
-    } else {
-        labelHTML = `<span><b>Imagen</b> (${canvasName})</span>`;
+    if (obj.type === "i-text" && istext===true) {
+        labelHTML = `<span><b>Texto - ${objectCounter}</b><textarea class="text-content" rows="10" cols="18">${obj.text}</textarea></span>`;
+    } else if (obj.type === "image") {
+        const thumbnail = obj._element.src;  // ★ AQUÍ ESTÁ EL BASE64 DE LA IMAGEN SUBIDA
+
+        labelHTML = `
+            <div class="li-image-item">
+                <img src="${thumbnail}" class="thumbnail-img">
+                <span><b>Imagen - ${objectCounter}</b></span>
+            </div>
+        `;
+    }else{
+        labelHTML = `
+            <div class="li-image-item">
+                <span class="thumbnail-img">${obj.text}</span>
+                <span><b>Emoji - ${objectCounter}</b></span>
+            </div>
+        `;
     }
 
     li.innerHTML = `
@@ -1302,7 +1341,7 @@ function addObjectToList(obj, canvasName) {
     const toolsContainer = li.querySelector(".tools");
 
     // === SOLO PARA TEXTOS ===
-    if (obj.type === "i-text") {
+    if (obj.type === "i-text" && istext===true) {
         toolsContainer.innerHTML = `
             <div class="tool-group">
                 <div class="tool-label"><i class="material-icons">format_color_text</i> Color</div>
@@ -1310,7 +1349,7 @@ function addObjectToList(obj, canvasName) {
             </div>
 
             <div class="tool-group">
-                <div class="tool-label"><i class="material-icons">text_fields</i> Tamaño <span class="text-size-value">${obj.fontSize}px</span></div>
+                <div class="tool-label"><i class="material-icons">text_fields</i> Tamaño <span id="text-sizeEl" class="text-size-value">${obj.fontSize}px</span></div>
                 <input type="range" value="${obj.fontSize}" min="10" max="200" class="text-size" id="text-sizeEl">
             </div>
 
@@ -1339,8 +1378,10 @@ function addObjectToList(obj, canvasName) {
                 <div class="tool-label"><i class="material-icons">border_color</i> Borde</div>
                 <input type="color" value="${obj.stroke || "#000000"}" class="text-border">
             </div>
-
-            <button class="dlt delete-text">Eliminar</button>
+            <div class="tool-group">
+                <div class="tool-label"></div>
+                <button class="dlt delete-text"><i class="material-icons">delete_forever</i> Eliminar</button>
+            </div>
         `;
         li.querySelector(".text-content").addEventListener("input", (e) => {
             obj.set("text", e.target.value);
@@ -1396,6 +1437,7 @@ function addObjectToList(obj, canvasName) {
             realCanvas.remove(obj);
             realCanvas.renderAll();
             li.remove();
+            showNotification(`Elemento eliminado en ${selectedTab} correctamente`, "warning");
         });
     }
 
@@ -1415,6 +1457,88 @@ function addObjectToList(obj, canvasName) {
             canvases[canvasName].remove(obj);
             canvases[canvasName].renderAll();
             li.remove();
+            showNotification(`Elemento eliminado en ${selectedTab} correctamente`, "warning");
         });
     }
+}
+// Lista de emojis (puedes agregar MUCHOS)
+const emojiCategories = {
+    faces: [
+        "😀","😁","😂","🤣","😃","😄","😅","😉","😊","😍",
+        "😘","😎","🤩","🤔","😐","😑","🥳","😇","😭","😡","😱"
+    ],
+
+    animals: [
+        "🐶","🐱","🐭","🐹","🐰","🦊","🐻","🐼","🐨","🐯",
+        "🦁","🐮","🐷","🐸","🐵","🐔","🐧","🐦","🐤","🐺"
+    ],
+
+    objects: [
+        "🔥","🌟","💯","❤️","💖","⚡","🎁","🛠️","💡","📌",
+        "🎨","🎧","📱","💻","📷","🕹️","🚗","📚","🔑","🔔"
+    ],
+
+    flags: [
+        "🇨🇱","🇦🇷","🇨🇴","🇵🇪","🇻🇪","🇺🇸","🇪🇸","🇧🇷","🇲🇽",
+        "🇯🇵","🇨🇳","🇰🇷","🇬🇧","🇫🇷","🇩🇪","🇮🇹","🇨🇦"
+    ]
+};
+
+function addEmoji() {
+    loadEmojiGrid("faces");
+    document.getElementById("emojiModal").style.display = "block";
+}
+
+function closeEmojiModal() {
+    document.getElementById("emojiModal").style.display = "none";
+}
+
+// Cargar emojis por categoría
+function loadEmojiGrid(category) {
+    const grid = document.getElementById("emojiGrid");
+    grid.innerHTML = "";
+
+    emojiCategories[category].forEach(emoji => {
+        const span = document.createElement("span");
+        span.textContent = emoji;
+
+        span.onclick = function() {
+            addEmojiToCanvas(emoji);
+            closeEmojiModal();
+        };
+
+        grid.appendChild(span);
+    });
+
+    // Activar clase en pestañas
+    document.querySelectorAll(".emoji-tab").forEach(btn => {
+        btn.classList.toggle("active", btn.dataset.cat === category);
+    });
+}
+
+// Cambiar pestañas de categorías
+document.addEventListener("click", function(e) {
+    if (e.target.classList.contains("emoji-tab")) {
+        loadEmojiGrid(e.target.dataset.cat);
+    }
+});
+
+// Agregar emoji al canvas
+function addEmojiToCanvas(emoji) {
+    const canvas = canvases[selectedTab];
+
+    const emojiObj = new fabric.IText(emoji, {
+        left: canvas.width / 2,
+        top: canvas.height / 2,
+        fontSize: 80,
+        fontFamily: "Noto Color Emoji, EmojiOne, sans-serif",
+        editable: false,
+    });
+
+    canvas.add(emojiObj);
+    canvas.setActiveObject(emojiObj);
+    emojiObj.id = generateObjectId();
+    addObjectToList(emojiObj, false, selectedTab);
+    showNotification(`Emoji agregado en ${selectedTab}!`, "success");
+    canvas.renderAll();
 }
