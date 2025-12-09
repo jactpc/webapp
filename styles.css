@@ -28,10 +28,10 @@ button, .tab, .controlsbtn, .size-button, .color-button {
 }
 
 /* ======== Contenedores ======== */
-.color-buttons, .size-buttons, .tabs {
+.color-buttons, .size-buttons, .tabs, .type-buttons {
   display: flex;
   gap: 10px;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
   justify-content: center;
   margin: 10px 0;
 }
@@ -43,9 +43,9 @@ button, .tab, .controlsbtn, .size-button, .color-button {
   padding: 0;
 }
 
-.color-button.active {
+.color-button.active, .type-button.active {
   border: 3px solid #007BFF; /* Azul de selección */
-  box-shadow: 0 0 5px rgba(0, 123, 255, 0.7);
+  box-shadow: 0px 0px 0px 4px rgba(0, 123, 255, 0.7);
 }
 
 .color-black { background: black; }
@@ -55,12 +55,32 @@ button, .tab, .controlsbtn, .size-button, .color-button {
 .color-blue  { background: blue; }
 
 /* ======== Botones de talla ======== */
+.type-button, .size-button{
+  padding: 10px;
+}
+.type-button{
+  background: #333;
+  width: 268px;
+  flex-basis: min-content;
+  cursor: pointer;
+  border: 1px solid;
+  color: #ffffff;
+  font-weight: bold;
+  border-color: #0056b3;
+  box-shadow: inset 0 -3px 0 #0056b3;
+  border-radius: 10px;
+}
 .size-button {
   background: #f0f0f0;
-  padding: 10px;
   width: 60px;
+
   text-align: center;
   position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: center;
 }
 
 .size-button.edited {
@@ -168,11 +188,10 @@ button, .tab, .controlsbtn, .size-button, .color-button {
   text-align: center;
   background: #007BFF;
   color: #fff;
-  width: 100%;
   animation: fadeIn 0.5s ease;
 }
 .hero {
-  padding: 50px 20px;  height: 100%;
+  padding: 50px 0;  height: 100%;
 }
 .hero h1, .hero2 h1 { font-size: 2.5em; margin-bottom: 20px; }
 .hero p  { font-size: 1.2em; margin-bottom: 30px; }
@@ -188,7 +207,6 @@ button, .tab, .controlsbtn, .size-button, .color-button {
 
 /* ======== Features ======== */
 .features {
-  padding: 20px;
   display: grid;
   gap: 20px;
   width: 100%;
@@ -208,11 +226,10 @@ button, .tab, .controlsbtn, .size-button, .color-button {
 
 /* ======== Footer ======== */
 .footer {
-  padding: 20px;
+  padding: 20px 0;
   text-align: center;
   background: #333;
   color: #fff;
-  width: 100%;
 }
 
 /* ======== Media queries ======== */
@@ -221,6 +238,12 @@ button, .tab, .controlsbtn, .size-button, .color-button {
   .size-button .quantity { font-size: 26px; }
   .canvas-left{ width: 65%;}
   .canvas-right{ width: 35%;}
+  .hero, .hero2{width: 100%;}
+  .footer{width: 100%;}
+  .features { padding: 20px 0; }
+  .steps-container {padding: 0 20px;}
+  #preview-container div {width: 161px;}
+  .feature-card{margin: 0 20px}
 }
 @media (max-width: 768px) {
   .color-button { width: 50px; height: 50px; }
@@ -234,14 +257,22 @@ button, .tab, .controlsbtn, .size-button, .color-button {
   .canvas-left{ width: 80%;}
   .canvas-right{ width: 80%;}
 }
+@media (min-width: 426px) {
+  .step { margin-left: 20px; width: 90px;}
+  
+}
 @media (max-width: 425px) {
+  .hero, .hero2{max-width: 100%;}
+  .hero2{width: 100%;}
   .canvas-container { max-height: 380px; }
   .canvas-controls { bottom: 5px; left: 5px; }
   .size-button { font-size: 10px; width: 40px; }
-  .feature-card { width: 99vw; }
   .tab { font-size: 15px; }
   .feature-card {padding: 10px;}
-  
+  .footer{max-width: 100%;}
+  .feature-card.active { margin: 10px; }
+  #preview-container div {width: 156px;}
+  .step { width: 70px; }
 }
 #preview-container {
   display: flex;
@@ -267,7 +298,6 @@ button, .tab, .controlsbtn, .size-button, .color-button {
       display: flex;
       justify-content: center;
       margin: 10px 0;
-      padding: 0 20px;
     }
     
     .step-indicator {
@@ -283,7 +313,6 @@ button, .tab, .controlsbtn, .size-button, .color-button {
       align-items: center;
       position: relative;
       flex: 1;
-      width: 90px;
     }
     
     .step-circle {
@@ -587,12 +616,12 @@ button.dlt:hover {
 
 .emoji-tab {
     flex: 1;
-    padding: 8px;
+    padding: 2px;
     border: none;
     background: #e0e0e0;
     cursor: pointer;
     border-radius: 6px;
-    font-size: 14px;
+    font-size: 31px;
 }
 
 .emoji-tab.active {
@@ -689,7 +718,7 @@ button.dlt:hover {
 
 .tab-desc {
   font-size: 10px;
-  color: #efefef;
+  color: #000000;
   margin-top: -2px;
 }
 
@@ -712,4 +741,27 @@ button.dlt:hover {
 }
 .btnzoom{
   cursor: pointer;
+}
+.quantity {
+    width: 30px;
+    text-align: center;
+    font-weight: bold;
+}
+.qty-btn {
+    width: 26px;
+    height: 26px;
+    border: none;
+    background: #ddd;
+    border-radius: 5px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.qty-btn:hover {
+    background: #ccc;
+}
+.size-title{
+  font-size: 16px;
+  padding: 5px;
+  width: 100%;
 }

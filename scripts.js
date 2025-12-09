@@ -1,6 +1,9 @@
 let currentStep = 1;
-const totalSteps = 4;
+const totalSteps = 5;
 let selectedColor = null;
+let selectedColorText = null;
+let selectedMaterial = null;
+let selectedMaterialText = null;
 let designData = {
     color: null,
     sizes: {},
@@ -47,7 +50,7 @@ function nextStep() {
     updateNavigationButtons();
     
     // Si estamos en el paso 4, actualizar resumen
-    if (currentStep === 4) {
+    if (currentStep === 5) {
         updateFinalSummary();
     }
     
@@ -103,13 +106,19 @@ function validateCurrentStep() {
   
     switch(currentStep) {
         case 1:
+        if (!selectedMaterial) {
+            validationMsg.style.display = 'block';
+            return false;
+        }
+        break;
+        case 2:
         if (!selectedColor) {
             validationMsg.style.display = 'block';
             return false;
         }
         break;
         
-        case 2:
+        case 3:
         const hasSizes = Object.values(designData.sizes).some(qty => qty > 0);
         if (!hasSizes) {
             validationMsg.style.display = 'block';
@@ -117,7 +126,11 @@ function validateCurrentStep() {
         }
         break;
         
-        case 3:
+        case 4:
+        // El paso 3 siempre es válido (pueden no agregar diseño)
+        break;
+
+        case 5:
         // El paso 3 siempre es válido (pueden no agregar diseño)
         break;
     }
@@ -130,34 +143,66 @@ function validateCurrentStep() {
 function saveCurrentStepData() {
     switch(currentStep) {
         case 1:
+        designData.material = selectedMaterial;
+        updateProgressSummary();
+        break;
+
+        case 2:
         designData.color = selectedColor;
         updateProgressSummary();
         break;
         
-        case 2:
+        case 3:
         designData.sizes = getSizesData();
         updateProgressSummary();
         break;
         
-        case 3:
+        case 4:
         saveDesignData();
         updateProgressSummary();
         break;
     }
 }
+// ========== PASO 1: SELECCIÓN DE TEXTIL ==========
+function selectType(dataType, nombre, element) {
+    // Actualizar UI
+    document.querySelectorAll(".type-button").forEach(btn => {
+        btn.classList.remove("active");
+    });
+    if (element){
+        selectedMaterial = dataType;
+        selectedMaterialText = nombre;
+        element.classList.add("active");
+    }
 
-// ========== PASO 1: SELECCIÓN DE COLOR ==========
-function selectColor(color, element) {
-    selectedColor = color;
-
+    // Ocultar mensaje de validación
+    document.getElementById('step1-validation').style.display = 'none';
+    fetch("get_data.php?type=colors&material=" + selectedMaterial)
+        .then(res => res.json())
+        .then(data => {
+            loadStep2Colors(data.colors);
+            selectedColor = null;
+            selectedColorText = null;
+        });
+    // Actualizar resumen
+    updateProgressSummary();
+    showNotification("¡Progreso guardado automáticamente!", "success");
+}
+// ========== PASO 2: SELECCIÓN DE COLOR ==========
+function selectColor(color, nombre, element) {
+    selectedColor = `${color}`;
+    selectedColorText=nombre;
     // Actualizar UI
     document.querySelectorAll(".color-button").forEach(btn => {
         btn.classList.remove("active");
     });
-    if (element) element.classList.add("active");
-
-    // Actualizar color en tiempo real si ya estamos en paso 3
-    if (currentStep >= 3) {
+    if (element){
+        fetch("get_data.php?type=sizes&material=" + selectedMaterial + "&color=" + selectedColor)
+        .then(res => res.json())
+        .then(data => {
+            loadStep3Sizes(data.sizes);
+        });
+        element.classList.add("active");
         changeTshirtColor(color, element);
     }
 
@@ -172,57 +217,77 @@ function selectColor(color, element) {
 // ========== PASO 2: SELECCIÓN DE TALLAS ==========
 function getSizesData() {
     const sizes = {};
-    const sizeElements = ['XXS', 'XS', 'S', 'M', 'L', 'XL', 'XXL'];
 
-    sizeElements.forEach(size => {
-    const qtyElement = document.getElementById(`quantity-${size}`);
-    const quantity = parseInt(qtyElement.textContent) || 0;
-    if (quantity > 0) {
-        sizes[size] = quantity;
-    }
+    document.querySelectorAll(".quantity").forEach(qtyEl => {
+        const size = qtyEl.id.replace("quantity-", "");
+        const quantity = parseInt(qtyEl.textContent) || 0;
+
+        if (quantity > 0) {
+            sizes[size] = quantity;
+        }
     });
 
     return sizes;
 }
 
-// Configurar eventos para cantidades de tallas
+function updateSizeUI(size, value) {
+    const qtyEl = document.getElementById(`quantity-${size}`);
+    const button = qtyEl.closest(".size-button");
+
+    qtyEl.textContent = value;
+
+    if (value >= 1) {
+        qtyEl.style.color = "white";
+        button.classList.add("active");
+        showNotification("¡Progreso guardado automáticamente!", "success");
+    } else {
+        qtyEl.style.color = "black";
+        button.classList.remove("active");
+    }
+
+    // Guardado y resumen
+    designData.sizes = getSizesData();
+    updateProgressSummary();
+}
+
+// --- Configurar todo en un solo lugar ---
 function setupSizeQuantityEvents() {
+
+    // (1) INPUT MANUAL
     document.querySelectorAll(".quantity").forEach(span => {
-        span.setAttribute("contenteditable", "true");
-        
+
         span.addEventListener("click", () => {
-            if (span.textContent.trim() === "0") {
-                span.textContent = "";
-            }
+            if (span.textContent.trim() === "0") span.textContent = "";
         });
-        
+
         span.addEventListener("input", () => {
             span.textContent = span.textContent.replace(/\D/g, "");
-            const value = parseInt(span.textContent, 10);
-            const button = span.closest(".size-button");
-        
-            if (!isNaN(value) && value >= 1) {
-                span.style.color = "white";
-                button.classList.add("active");
-                // Ocultar mensaje de validación
-                document.getElementById('step2-validation').style.display = 'none';
-                showNotification("¡Progreso guardado automáticamente!", "success");
-            } else {
-                span.style.color = "black";
-                button.classList.remove("active");
-            }
-            
-            // Guardar en tiempo real
-            designData.sizes = getSizesData();
-            updateProgressSummary();
+
+            const size = span.id.replace("quantity-", "");
+            const value = parseInt(span.textContent) || 0;
+
+            updateSizeUI(size, value);
         });
-        
+
         span.addEventListener("blur", () => {
             if (span.textContent.trim() === "") {
-                span.textContent = "0";
-                span.style.color = "black";
-                span.closest(".size-button").classList.remove("active");
+                updateSizeUI(span.id.replace("quantity-", ""), 0);
             }
+        });
+    });
+
+
+    // (2) BOTONES + y -
+    document.querySelectorAll(".qty-btn").forEach(btn => {
+        btn.addEventListener("click", () => {
+            const size = btn.getAttribute("data-size");
+            const qtyEl = document.getElementById(`quantity-${size}`);
+            let value = parseInt(qtyEl.textContent) || 0;
+
+            if (btn.classList.contains("plus")) value++;
+            if (btn.classList.contains("minus")) value = Math.max(0, value - 1);
+
+            updateSizeUI(size, value);
         });
     });
 }
@@ -242,16 +307,12 @@ function saveDesignData() {
 // ========== RESUMEN Y PROGRESO ==========
 function updateProgressSummary() {
     // Actualizar color
+    const materialText = document.getElementById('summary-material-text');
+    materialText.textContent = selectedMaterialText;
+
     const colorText = document.getElementById('summary-color-text');
     if (selectedColor) {
-        const colorNames = {
-            'black': 'Negro',
-            'white': 'Blanco',
-            'gray': 'Gris',
-            'red': 'Rojo',
-            'blue': 'Azul'
-        };
-        colorText.textContent = colorNames[selectedColor] || selectedColor;
+        colorText.textContent = selectedColorText;
     }
 
     // Actualizar tallas
@@ -282,15 +343,8 @@ function updateProgressSummary() {
 }
 
 function updateFinalSummary() {
-    // Actualizar color final
-    const colorNames = {
-    'black': 'Negro',
-    'white': 'Blanco',
-    'gray': 'Gris',
-    'red': 'Rojo',
-    'blue': 'Azul'
-    };
-    document.getElementById('final-color').textContent = colorNames[selectedColor] || selectedColor;
+    document.getElementById('final-Material').textContent = selectedMaterialText;
+    document.getElementById('final-color').textContent = selectedColorText;
 
     // Actualizar tallas finales
     const finalSizesList = document.getElementById('final-sizes');
@@ -396,23 +450,6 @@ document.addEventListener('DOMContentLoaded', function() {
     // Inicializar botones de navegación
     updateNavigationButtons();
 });
-
-function changeTshirtColor(color, element) {
-    selectedColor = color;
-    currentColor = color;
-
-    Object.keys(canvases).forEach(section => {
-        sectionsState[section].bgSrc = `img/1.${section}.${currentColor}.jpg`;
-        loadBackground(section);
-    });
-
-    document.querySelectorAll(".color-button").forEach(btn => {
-        btn.classList.remove("active");
-    });
-
-    if (element) element.classList.add("active");
-}
-
 // ——— Canvases (uno por sección) ———
 const canvases = {
     front: new fabric.Canvas('front-canvas'),
@@ -422,16 +459,15 @@ const canvases = {
 };
 
 let selectedTab = 'front';
-let currentColor = 'black';
+let currentColor = '0001';
 
 // Estado por sección: JSON de objetos + src de fondo actual
 const sectionsState = {
-    front: { json: null, bgSrc: `img/1.front.${currentColor}.jpg` },
-    back: { json: null, bgSrc: `img/1.back.${currentColor}.jpg` },
-    leftsleeve: { json: null, bgSrc: `img/1.leftsleeve.${currentColor}.jpg` },
-    rightsleeve: { json: null, bgSrc: `img/1.rightsleeve.${currentColor}.jpg` }
+    front: { json: null, bgSrc: `img/0001${currentColor}.front.jpg` },
+    back: { json: null, bgSrc: `img/0001${currentColor}.back.jpg` },
+    leftsleeve: { json: null, bgSrc: `img/0001${currentColor}.leftsleeve.jpg` },
+    rightsleeve: { json: null, bgSrc: `img/0001${currentColor}.rightsleeve.jpg` }
 };
-
   // ——— Utilidades de fondo ———
 function loadBackground(section, renderNow = true) {
     const canvas = canvases[section];
@@ -467,7 +503,21 @@ function loadBackground(section, renderNow = true) {
         { crossOrigin: "anonymous" }
   );
 }
+function changeTshirtColor(color, element) {
+    selectedColor = color;
+    currentColor = color;
 
+    Object.keys(canvases).forEach(section => {
+        sectionsState[section].bgSrc = `img/${selectedMaterial}${currentColor}.${section}.jpg`;
+        loadBackground(section);
+    });
+
+    document.querySelectorAll(".color-button").forEach(btn => {
+        btn.classList.remove("active");
+    });
+
+    if (element) element.classList.add("active");
+}
 
 function saveSection(section) {
     const canvas = canvases[section];
@@ -1013,20 +1063,25 @@ switchTab = function(tab) {
 
 
 const zoomSlider = document.getElementById("zoom-slider");
+const MIN_ZOOM = 0.2;
+const MAX_ZOOM = 4;
+
 function syncZoomSlider() {
     const canvas = canvases[selectedTab];
-    zoomSlider.value = canvas.getZoom().toFixed(2);
+    zoomSlider.value = canvas.getZoom();
 }
 function zoomIn() {
     const canvas = canvases[selectedTab];
-    const zoom = canvas.getZoom() * 1.2;
+    let zoom = canvas.getZoom() * 1.2;
+    if (zoom > MAX_ZOOM) zoom = MAX_ZOOM;
     canvas.zoomToPoint({ x: canvas.width / 2, y: canvas.height / 2 }, zoom);
     syncZoomSlider();
 }
 
 function zoomOut() {
     const canvas = canvases[selectedTab];
-    const zoom = canvas.getZoom() / 1.2;
+    let zoom = canvas.getZoom() / 1.2;
+    if (zoom < MIN_ZOOM) zoom = MIN_ZOOM;
     canvas.zoomToPoint({ x: canvas.width / 2, y: canvas.height / 2 }, zoom);
     syncZoomSlider();
 }
@@ -1046,44 +1101,8 @@ function resetZoom() {
     const canvas = canvases[selectedTab];
     canvas.setViewportTransform([1, 0, 0, 1, 0, 0]);
     canvas.setZoom(1);
+    syncZoomSlider();
 }
-
-document.querySelectorAll(".quantity").forEach(span => {
-    // Hacer editable
-    span.setAttribute("contenteditable", "true");
-
-    // Al hacer click, si es 0, se borra
-    span.addEventListener("click", () => {
-        if (span.textContent.trim() === "0") {
-            span.textContent = "";
-        }
-    });
-
-    // Mientras escribes, solo permitir dígitos y actualizar color
-    span.addEventListener("input", () => {
-        span.textContent = span.textContent.replace(/\D/g, "");
-        
-        const value = parseInt(span.textContent, 10);
-        const button = span.closest(".size-button"); // Obtener contenedor
-
-        if (!isNaN(value) && value >= 1) {
-            span.style.color = "white";
-            button.classList.add("active"); // marcar como activo
-        } else {
-            span.style.color = "black";
-            button.classList.remove("active"); // quitar activo
-        }
-    });
-
-    // Al perder foco, si queda vacío poner 0
-    span.addEventListener("blur", () => {
-        if (span.textContent.trim() === "") {
-            span.textContent = "0";
-            span.style.color = "black";
-            span.closest(".size-button").classList.remove("active");
-        }
-    });
-});
 
 function addSize(size) { console.log(`Se seleccionó la talla ${size}`); }
 
@@ -1461,36 +1480,16 @@ function addObjectToList(obj, istext, canvasName) {
         });
     }
 }
-// Lista de emojis (puedes agregar MUCHOS)
-const emojiCategories = {
-    faces: [
-        "😀","😁","😂","🤣","😃","😄","😅","😉","😊","😍",
-        "😘","😎","🤩","🤔","😐","😑","🥳","😇","😭","😡","😱"
-    ],
-
-    animals: [
-        "🐶","🐱","🐭","🐹","🐰","🦊","🐻","🐼","🐨","🐯",
-        "🦁","🐮","🐷","🐸","🐵","🐔","🐧","🐦","🐤","🐺"
-    ],
-
-    objects: [
-        "🔥","🌟","💯","❤️","💖","⚡","🎁","🛠️","💡","📌",
-        "🎨","🎧","📱","💻","📷","🕹️","🚗","📚","🔑","🔔"
-    ],
-
-    flags: [
-        "🇨🇱","🇦🇷","🇨🇴","🇵🇪","🇻🇪","🇺🇸","🇪🇸","🇧🇷","🇲🇽",
-        "🇯🇵","🇨🇳","🇰🇷","🇬🇧","🇫🇷","🇩🇪","🇮🇹","🇨🇦"
-    ]
-};
 
 function addEmoji() {
     loadEmojiGrid("faces");
     document.getElementById("emojiModal").style.display = "block";
+    document.body.style.overflow = "hidden";
 }
 
 function closeEmojiModal() {
     document.getElementById("emojiModal").style.display = "none";
+    document.body.style.overflow = "auto";
 }
 
 // Cargar emojis por categoría
@@ -1542,3 +1541,10 @@ function addEmojiToCanvas(emoji) {
     showNotification(`Emoji agregado en ${selectedTab}!`, "success");
     canvas.renderAll();
 }
+// Lista de emojis (puedes agregar MUCHOS)
+fetch('emojis.json')
+    .then(res => res.json())
+    .then(data => {
+        window.emojiCategories = data;
+        console.log("Emojis cargados:", data);
+});

@@ -21,21 +21,26 @@
     <div class="step-indicator">
       <div class="step active" id="step-1">
         <div class="step-circle">1</div>
-        <div class="step-title">Color</div>
+        <div class="step-title">Tipo</div>
         <div class="step-line"></div>
       </div>
       <div class="step" id="step-2">
         <div class="step-circle">2</div>
-        <div class="step-title">Tallas</div>
+        <div class="step-title">Color</div>
         <div class="step-line"></div>
       </div>
       <div class="step" id="step-3">
         <div class="step-circle">3</div>
-        <div class="step-title">Diseño</div>
+        <div class="step-title">Tallas</div>
         <div class="step-line"></div>
       </div>
       <div class="step" id="step-4">
         <div class="step-circle">4</div>
+        <div class="step-title">Diseño</div>
+        <div class="step-line"></div>
+      </div>
+      <div class="step" id="step-5">
+        <div class="step-circle">5</div>
         <div class="step-title">Resumen</div>
         <div class="step-line"></div>
       </div>
@@ -43,37 +48,29 @@
   </div>
 
   <div class="features" id="features" style="display: none;">
-    <!-- Step 1: Color Selection -->
+    <!-- Step 1: tipo Selection -->
     <div class="feature-card active" id="step1-content">
-      <h3>Paso 1: Elige el Color de tu Camiseta</h3>
-      <p>Selecciona el color base para tu camiseta personalizada.</p>
-      <div class="color-buttons">
-        <div class="color-button color-black" onclick="selectColor('black', this)"></div>
-        <div class="color-button color-white" onclick="selectColor('white', this)"></div>
-        <div class="color-button color-gray" onclick="selectColor('gray', this)"></div>
-        <div class="color-button color-red" onclick="selectColor('red', this)"></div>
-        <div class="color-button color-blue" onclick="selectColor('blue', this)"></div>
-      </div>
-      <div class="step-validation" id="step1-validation">Por favor, selecciona un color para continuar</div>
+      <h3>Paso 1: Elige el material Textil</h3>
+      <div class="type-buttons"></div>
+      <div class="step-validation" id="step1-validation">Por favor, selecciona el material de polera para continuar</div>
     </div>
-    <!-- Step 2: Size Selection -->
+    <!-- Step 2: Color Selection -->
     <div class="feature-card" id="step2-content">
-      <h3>Paso 2: Selecciona las Tallas y Cantidades</h3>
-      <p>Elige las tallas que necesitas y especifica la cantidad para cada una.</p>
-      <div class="size-buttons">
-        <div class="size-button">XXS<span class="quantity" id="quantity-XXS" contenteditable="true">0</span></div>
-        <div class="size-button">XS<span class="quantity" id="quantity-XS" contenteditable="true">0</span></div>
-        <div class="size-button">S<span class="quantity" id="quantity-S" contenteditable="true">0</span></div>
-        <div class="size-button">M<span class="quantity" id="quantity-M" contenteditable="true">0</span></div>
-        <div class="size-button">L<span class="quantity" id="quantity-L" contenteditable="true">0</span></div>
-        <div class="size-button">XL<span class="quantity" id="quantity-XL" contenteditable="true">0</span></div>
-        <div class="size-button">XXL<span class="quantity" id="quantity-XXL" contenteditable="true">0</span></div>
-      </div>
-      <div class="step-validation" id="step2-validation">Por favor, selecciona al menos una talla e introduzca la cantidad</div>
+      <h3>Paso 2: Elige el Color de tu Camiseta</h3>
+      <p>Selecciona el color base para tu camiseta personalizada.</p>
+      <div class="color-buttons"></div>
+      <div class="step-validation" id="step2-validation">Por favor, selecciona un color para continuar</div>
     </div>
-    <!-- Step 3: Design -->
+    <!-- Step 3: Size Selection -->
     <div class="feature-card" id="step3-content">
-      <h3>Paso 3: Personaliza tu Camiseta</h3>
+      <h3>Paso 3: Selecciona las Tallas y Cantidades</h3>
+      <p>Elige las tallas que necesitas y especifica la cantidad para cada una.</p>
+      <div class="size-buttons"></div>
+      <div class="step-validation" id="step3-validation">Por favor, selecciona al menos una talla e introduzca la cantidad</div>
+    </div>
+    <!-- Step 4: Design -->
+    <div class="feature-card" id="step4-content">
+      <h3>Paso 4: Personaliza tu Camiseta</h3>
       <p>Agrega texto, imágenes o logos de tu preferencia.</p>
       <div class="editor-container">
         <div class="canvas-left">
@@ -93,7 +90,7 @@
             <i class="material-icons btnzoom" onclick="zoomOut()">zoom_out</i>
               <input style="width: 79px;" id="zoom-slider" type="range" min="0.2" max="4" step="0.01" value="1" class="zoom-slider">
             <i class="material-icons btnzoom" onclick="zoomIn()">zoom_in</i>
-            <i class="material-icons btnzoom" id="reset-zoom" onclick="resetZoom()">open_with</i>
+            <i class="material-icons btnzoom" id="reset-zoom" onclick="resetZoom()">zoom_in_map</i>
             <canvas id="mini-map" width="175" height="200"></canvas>
           </div>
         </div>
@@ -143,12 +140,12 @@
           <ul id="elements-rightsleeve" class="elements-list hidden"><h3>Elementos agregados - Right Sleeve</h3></ul>
         </div>
       </div>
-      <div class="step-validation" id="step3-validation">Puedes personalizar tu diseño o continuar con el diseño básico</div>
+      <div class="step-validation" id="step4-validation">Puedes personalizar tu diseño o continuar con el diseño básico</div>
     </div>
     
-    <!-- Step 4: Summary -->
-    <div class="feature-card" id="step4-content">
-        <h3>Paso 4: Resumen y Descarga</h3>
+    <!-- Step 5: Summary -->
+    <div class="feature-card" id="step5-content">
+        <h3>Paso 5: Resumen y Descarga</h3>
         <p>Revisa tu diseño y descarga las imágenes para producción.</p>
         
         <div class="preview-section">
@@ -176,6 +173,7 @@
     <div class="order-summary">
       <h4>Resumen de tu Pedido</h4>
       <div class="summary-details">
+        <p><strong>Material seleccionado:</strong> <span id="final-Material">Negro</span></p>
         <p><strong>Color seleccionado:</strong> <span id="final-color">Negro</span></p>
         <p><strong>Tallas y cantidades:</strong></p>
         <ul id="final-sizes">
@@ -202,6 +200,9 @@
     <!-- Progress Summary -->
   <div class="progress-summary" id="progress-summary">
     <h3>Resumen de tu diseño:</h3>
+    <div class="summary-item" id="summary-material">
+      <strong>Material:</strong> <span id="summary-material-text">No seleccionado</span>
+    </div>
     <div class="summary-item" id="summary-color">
       <strong>Color:</strong> <span id="summary-color-text">No seleccionado</span>
     </div>
@@ -226,14 +227,86 @@
       <span class="close-emoji" onclick="closeEmojiModal()">×</span>
       <h3>Selecciona un Emoji</h3>
       <div class="emoji-tabs">
-            <button class="emoji-tab active" data-cat="faces">😀 Caritas</button>
-            <button class="emoji-tab" data-cat="animals">🐶 Animales</button>
-            <button class="emoji-tab" data-cat="objects">🔥 Objetos</button>
-            <button class="emoji-tab" data-cat="flags">🇨🇱 Países</button>
+            <button class="emoji-tab active" data-cat="faces">😀</button>
+            <button class="emoji-tab" data-cat="gestures">👋</button>
+            <button class="emoji-tab" data-cat="animals">🐶</button>
+            <button class="emoji-tab" data-cat="food">🍎</button>
+            <button class="emoji-tab" data-cat="objects">🔥</button>
+            <button class="emoji-tab" data-cat="travel">✈️</button>
+            <button class="emoji-tab" data-cat="symbols">💟</button>
+            <button class="emoji-tab" data-cat="flags">🇨🇱</button>
       </div>
       <div id="emojiGrid" class="emoji-grid scrollable"></div>
     </div>
   </div>
+  <script>
+document.addEventListener("DOMContentLoaded", () => {
+    loadMaterials();
+});
+function loadMaterials() {
+    fetch("get_data.php?type=step1")
+        .then(res => res.json())
+        .then(data => {
+            loadStep1Materials(data.materials);
+        });
+}
+
+function loadStep1Materials(materials) {
+    const container = document.querySelector("#step1-content .type-buttons");
+    container.innerHTML = ""; // limpiar
+
+    materials.forEach(item => {
+        const div = document.createElement("div");
+        div.classList.add("type-button");
+        div.setAttribute("onclick", `selectType("${item.id}", "${item.nombre}", this)`);
+        div.innerHTML = `
+            <img src="img/icon/${item.imgSrc}" alt="">
+            <span>${item.nombre}</span>
+        `;
+        container.appendChild(div);
+    });
+}
+function loadStep2Colors(colors) {
+    const container = document.querySelector("#step2-content .color-buttons");
+    container.innerHTML = ""; // limpiar
+
+    colors.forEach(color => {
+        const btn = document.createElement("div");
+        btn.classList.add("color-button");
+        btn.style.background = `#${color.code_back}`;
+        btn.setAttribute("onclick", `selectColor("${color.id}", "${color.nombre}", this)`);
+        btn.id = color.nombre;
+        btn.setAttribute("title", color.nombre);
+        container.appendChild(btn);
+    });
+}
+function loadStep3Sizes(sizes) {
+    const container = document.querySelector("#step3-content .size-buttons");
+    container.innerHTML = ""; // limpiar contenedor
+
+    sizes.forEach(size => {
+        const div = document.createElement("div");
+        div.classList.add("size-button");
+
+        div.innerHTML = `
+            <div class="size-title">${size.nombre}</div>
+
+            <button class="qty-btn minus" data-size="${size.nombre}">–</button>
+
+            <span class="quantity" 
+                  id="quantity-${size.nombre}" 
+                  contenteditable="true">0</span>
+
+            <button class="qty-btn plus" data-size="${size.nombre}">+</button>
+        `;
+
+        container.appendChild(div);
+    });
+
+    // Después de generar los botones, activar eventos
+    setupSizeQuantityEvents();  
+}
+</script>
 </body>
 </html>
 <script src="scripts.js"></script>
