@@ -373,7 +373,7 @@ function updateFinalSummary() {
     updatePreviews();
 }
 
-function showNotification(message, type = "info", duration = 3000) {
+function showNotification(message, type = "info", element = null, duration = 3000) {
     const notification = document.getElementById("save-notification");
 
     // Limpiar clases anteriores
@@ -388,7 +388,16 @@ function showNotification(message, type = "info", duration = 3000) {
     // Mostrar
     notification.style.display = "block";
     setTimeout(() => notification.style.opacity = "1", 10);
-
+    
+    if (element && element instanceof HTMLElement) {
+        // Agregar clase de resaltado al li
+        element.classList.add(`notify-${type}`);
+        
+        // Quitar la clase después de un tiempo
+        setTimeout(() => {
+            element.classList.remove(`notify-${type}`);
+        }, duration + 300); // Un poco más que la duración de la notificación
+    }
     // Ocultar automáticamente
     setTimeout(() => {
         notification.style.opacity = "0";
@@ -628,7 +637,6 @@ function addText() {
     text.id = generateObjectId();
     canvases[selectedTab].add(text);
     addObjectToList(text, true, selectedTab);
-    showNotification("¡Texto agregado!", "success");
 }
 
 function updateTextFont() {
@@ -1263,20 +1271,28 @@ Object.values(canvases).forEach((canvas) => {
 });
 
 Object.values(canvases).forEach((canvas) => {
-    const canvasEl = canvas.upperCanvasEl; // canvas HTML real
+    const canvasEl = canvas.upperCanvasEl;
     let lastDistance = 0;
+    let isPinching = false;
+
+    canvasEl.addEventListener('touchstart', function(e) {
+        if (e.touches.length === 2) {
+            isPinching = true;
+            // Deshabilitar scroll de página temporalmente
+            document.body.style.overflow = 'hidden';
+        }
+    }, { passive: true });
 
     canvasEl.addEventListener('touchmove', function(e) {
-        if (e.touches.length === 2) {
-            e.preventDefault(); // evitar scroll
-
+        if (e.touches.length === 2 && isPinching) {
+            e.preventDefault();
+            
             const dx = e.touches[0].clientX - e.touches[1].clientX;
             const dy = e.touches[0].clientY - e.touches[1].clientY;
             const distance = Math.sqrt(dx*dx + dy*dy);
 
             if (lastDistance) {
                 const zoomFactor = distance / lastDistance;
-                // Centro del gesto
                 const centerX = (e.touches[0].clientX + e.touches[1].clientX) / 2 - canvasEl.getBoundingClientRect().left;
                 const centerY = (e.touches[0].clientY + e.touches[1].clientY) / 2 - canvasEl.getBoundingClientRect().top;
 
@@ -1285,10 +1301,65 @@ Object.values(canvases).forEach((canvas) => {
 
             lastDistance = distance;
             canvas.renderAll();
+        } else if (e.touches.length === 1 && !isPinching) {
+            // Permitir scroll normal con un dedo
+            return;
         }
+    }, { passive: false });
+
+    canvasEl.addEventListener('touchend', function() {
+        isPinching = false;
+        lastDistance = 0;
+        // Restaurar scroll de página
+        document.body.style.overflow = 'auto';
     });
 });
+// Función para bloquear interacción con el fondo
+function lockBackgroundInteraction() {
+    Object.values(canvases).forEach((canvas) => {
+        // Configurar fondo como no interactivo
+        if (canvas.backgroundImage) {
+            canvas.backgroundImage.set({
+                selectable: false,
+                evented: false,
+                hasControls: false,
+                hasBorders: false,
+                lockMovementX: true,
+                lockMovementY: true,
+                lockRotation: true,
+                lockScalingX: true,
+                lockScalingY: true,
+                lockUniScaling: true,
+                lockSkewingX: true,
+                lockSkewingY: true
+            });
+        }
+        
+        // Evento al cargar nuevo fondo
+        canvas.on('background:loaded', function() {
+            if (canvas.backgroundImage) {
+                canvas.backgroundImage.set({
+                    selectable: false,
+                    evented: false,
+                    hasControls: false,
+                    hasBorders: false,
+                    lockMovementX: true,
+                    lockMovementY: true,
+                    lockRotation: true,
+                    lockScalingX: true,
+                    lockScalingY: true,
+                    lockUniScaling: true,
+                    lockSkewingX: true,
+                    lockSkewingY: true
+                });
+                canvas.renderAll();
+            }
+        });
+    });
+}
 
+// Llamar después de cargar los fondos
+lockBackgroundInteraction();
 const designAreas = {
     front: { x: 150, y: 100, width: 300, height: 400 },
     back: { x: 150, y: 100, width: 300, height: 400 },
@@ -1329,29 +1400,7 @@ function addObjectToList(obj, istext, canvasName) {
     obj._listId = "item-" + obj.id; // evita undefined y duplicados
     li.id = obj._listId;
 
-    let labelHTML = "";
-    if (obj.type === "i-text" && istext===true) {
-        labelHTML = `<span><b>Texto - ${objectCounter}</b><textarea class="text-content" rows="10" cols="18">${obj.text}</textarea></span>`;
-    } else if (obj.type === "image") {
-        const thumbnail = obj._element.src;  // ★ AQUÍ ESTÁ EL BASE64 DE LA IMAGEN SUBIDA
-
-        labelHTML = `
-            <div class="li-image-item">
-                <img src="${thumbnail}" class="thumbnail-img">
-                <span><b>Imagen - ${objectCounter}</b></span>
-            </div>
-        `;
-    }else{
-        labelHTML = `
-            <div class="li-image-item">
-                <span class="thumbnail-img">${obj.text}</span>
-                <span><b>Emoji - ${objectCounter}</b></span>
-            </div>
-        `;
-    }
-
     li.innerHTML = `
-        ${labelHTML}
         <div class="tools"></div>
     `;
 
@@ -1363,10 +1412,17 @@ function addObjectToList(obj, istext, canvasName) {
     if (obj.type === "i-text" && istext===true) {
         toolsContainer.innerHTML = `
             <div class="tool-group">
+                <div class="tool-label"><i class="material-icons">text_snippet</i> Texto - ${objectCounter}</div>
+                <textarea class="text-content" rows="10" cols="18">${obj.text}</textarea>
+            </div>
+            <div class="tool-group">
                 <div class="tool-label"><i class="material-icons">format_color_text</i> Color</div>
                 <input type="color" value="${obj.fill}" class="text-color">
             </div>
-
+            <div class="tool-group">
+                <div class="tool-label"><i class="material-icons">border_color</i> Borde</div>
+                <input type="color" value="${obj.stroke || "#000000"}" class="text-border">
+            </div>
             <div class="tool-group">
                 <div class="tool-label"><i class="material-icons">text_fields</i> Tamaño <span id="text-sizeEl" class="text-size-value">${obj.fontSize}px</span></div>
                 <input type="range" value="${obj.fontSize}" min="10" max="200" class="text-size" id="text-sizeEl">
@@ -1391,11 +1447,6 @@ function addObjectToList(obj, istext, canvasName) {
                     <option value="Dancing Script">Dancing Script</option>
                     <option value="Bebas Neue">Bebas Neue</option>
                 </select>
-            </div>
-
-            <div class="tool-group">
-                <div class="tool-label"><i class="material-icons">border_color</i> Borde</div>
-                <input type="color" value="${obj.stroke || "#000000"}" class="text-border">
             </div>
             <div class="tool-group">
                 <div class="tool-label"></div>
@@ -1458,11 +1509,17 @@ function addObjectToList(obj, istext, canvasName) {
             li.remove();
             showNotification(`Elemento eliminado en ${selectedTab} correctamente`, "warning");
         });
-    }
-
-    // === PARA IMÁGENES (opciones básicas) ===
-    else {
+        showNotification("¡Texto agregado!", "success",li);
+    } else if (obj.type === "i-text" && istext===false) {
         toolsContainer.innerHTML = `
+            <div class="tool-group">
+                <div class="tool-label"><i class="material-icons">add_reaction</i> Emoji - ${objectCounter}</div>
+                <span class="thumbnail-img">${obj.text}</span>
+            </div>
+            <div class="tool-group">
+                <div class="tool-label"><i class="material-icons">text_fields</i> Tamaño <span id="text-sizeEl" class="text-sizeEmo-value">${obj.fontSize}px</span></div>
+                <input type="range" value="${obj.fontSize}" min="10" max="500" class="text-sizeEmo" id="text-sizeEl">
+            </div>
             <button class="select-btn">Seleccionar</button>
             <button class="delete-btn">Eliminar</button>
         `;
@@ -1477,6 +1534,120 @@ function addObjectToList(obj, istext, canvasName) {
             canvases[canvasName].renderAll();
             li.remove();
             showNotification(`Elemento eliminado en ${selectedTab} correctamente`, "warning");
+        });
+        const sizeSlider = toolsContainer.querySelector(".text-sizeEmo");
+        const sizeText = toolsContainer.querySelector(".text-sizeEmo-value");
+
+        sizeSlider.addEventListener("input", (e) => {
+            const newSize = parseInt(e.target.value);
+
+            obj.set("fontSize", newSize);
+            obj.initDimensions();
+
+            sizeText.textContent = newSize + "px"; // ← actualiza el texto al lado del slider
+
+            canvases[canvasName].renderAll();
+        });
+    }else if (obj.type === "image") {
+        const thumbnail = obj._element.src;  // ★ AQUÍ ESTÁ EL BASE64 DE LA IMAGEN SUBIDA
+
+        const initialScale = obj.scaleX * 100;
+        const initialRotation = obj.angle || 0;
+        toolsContainer.innerHTML = `
+        <div class="tool-group">
+            <div class="tool-label"><i class="material-icons">image</i> Imagen - ${objectCounter}</div>
+            <img src="${thumbnail}" class="thumbnail-img">
+        </div>
+        <div class="tool-group">
+            <div class="tool-label"><i class="material-icons">photo_size_select_large</i> Tamaño 
+                <span class="img-size-value">${Math.round(initialScale)}%</span>
+            </div>
+            <input type="range" class="img-size-slider" min="10" max="300" value="${Math.round(initialScale)}">
+        </div>
+        <div class="tool-group">
+            <div class="tool-label"><i class="material-icons">rotate_right</i> Rotación
+                <span class="rotation-value">${Math.round(initialRotation)}°</span>
+            </div>
+            <input type="range" class="rotation-slider" min="0" max="360" value="${Math.round(initialRotation)}">
+            <div class="rotation-buttons">
+                <button class="rotate-btn rotate-left" title="Rotar 90° izquierda">↶</button>
+                <button class="rotate-btn rotate-right" title="Rotar 90° derecha">↷</button>
+                <button class="rotate-btn rotate-reset" title="Restablecer">⟲</button>
+            </div>
+        </div>
+        <div class="tool-buttons">
+            <button class="select-btn">Seleccionar</button>
+            <button class="delete-btn">Eliminar</button>
+        </div>
+        `;
+        toolsContainer.querySelector(".select-btn").addEventListener("click", () => {
+            canvases[canvasName].setActiveObject(obj);
+            canvases[canvasName].renderAll();
+            showNotification("Imagen seleccionada", "info");
+        });
+
+        toolsContainer.querySelector(".delete-btn").addEventListener("click", () => {
+            canvases[canvasName].remove(obj);
+            canvases[canvasName].renderAll();
+            li.remove();
+            showNotification(`Elemento eliminado en ${selectedTab} correctamente`, "warning");
+        });
+        // === SLIDER PARA EL TAMAÑO ===
+        const slider = toolsContainer.querySelector(".img-size-slider");
+        const sizeLabel = toolsContainer.querySelector(".img-size-value");
+
+        slider.addEventListener("input", (e) => {
+            const scale = parseInt(e.target.value) / 100;
+
+            obj.scale(scale);  // ← Function especial: mantiene proporción
+            sizeLabel.textContent = e.target.value + "%";
+            canvases[canvasName].renderAll();
+        });
+    // === SLIDER PARA LA ROTACIÓN ===
+        const rotationSlider = toolsContainer.querySelector(".rotation-slider");
+        const rotationLabel = toolsContainer.querySelector(".rotation-value");
+
+        rotationSlider.addEventListener("input", (e) => {
+            const angle = parseInt(e.target.value);
+            obj.set('angle', angle);  // Usar set() para cambiar el ángulo
+            rotationLabel.textContent = angle + "°";
+            canvases[canvasName].renderAll();
+        });
+
+        // === BOTONES DE ROTACIÓN RÁPIDA ===
+        const rotateLeftBtn = toolsContainer.querySelector(".rotate-left");
+        const rotateRightBtn = toolsContainer.querySelector(".rotate-right");
+        const rotateResetBtn = toolsContainer.querySelector(".rotate-reset");
+
+        // Rotar 90° izquierda
+        rotateLeftBtn.addEventListener("click", () => {
+            const currentAngle = obj.angle || 0;
+            const newAngle = (currentAngle - 90) % 360;
+            obj.set('angle', newAngle);
+            rotationSlider.value = newAngle;
+            rotationLabel.textContent = Math.round(newAngle) + "°";
+            canvases[canvasName].renderAll();
+            showNotification("Rotado 90° a la izquierda", "info");
+        });
+
+        // Rotar 90° derecha
+        rotateRightBtn.addEventListener("click", () => {
+            const currentAngle = obj.angle || 0;
+            const newAngle = (currentAngle + 90) % 360;
+            obj.set('angle', newAngle);
+            rotationSlider.value = newAngle;
+            rotationLabel.textContent = Math.round(newAngle) + "°";
+            canvases[canvasName].renderAll();
+            showNotification("Rotado 90° a la derecha", "info");
+        });
+
+        // Restablecer rotación
+        rotateResetBtn.addEventListener("click", () => {
+            obj.set('angle', 0);
+            rotationSlider.value = 0;
+            rotationLabel.textContent = "0°";
+            canvases[canvasName].renderAll();
+            showNotification("Rotación restablecida", "info");
         });
     }
 }

@@ -3,7 +3,12 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Diseñador de Camisetas</title>
+  <title>Diseñador de Poleras Jactpcl</title>
+  <link rel="icon" href="favicon.ico" type="image/x-icon">
+  <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="assets/favicon-16x16.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="assets/apple-touch-icon.png">
+  <link rel="manifest" href="site.webmanifest">
   <link rel="stylesheet" href="styles.css">
   <link href="https://fonts.googleapis.com/css2?family=Playwrite+AU+SA&family=Tomorrow:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap" rel="stylesheet">
 </head>
@@ -99,24 +104,21 @@
           <div class="tabs">
             <div class="tab active" data-tab="front" onclick="switchTab('front')">
               <span class="tab-title">Pecho</span>
-              <span class="tab-desc">Área frontal</span>
             </div>
             <div class="tab" data-tab="back" onclick="switchTab('back')">
               <span class="tab-title">Espalda</span>
-              <span class="tab-desc">Zona trasera</span>
             </div>
             <div class="tab" data-tab="leftsleeve" onclick="switchTab('leftsleeve')">
               <span class="tab-title">Manga Izq.</span>
-              <span class="tab-desc">Lado izquierdo</span>
             </div>
 
             <div class="tab" data-tab="rightsleeve" onclick="switchTab('rightsleeve')">
               <span class="tab-title">Manga Der.</span>
-              <span class="tab-desc">Lado derecho</span>
             </div>
           </div>
           <h2 class="panel-title">Herramientas de Diseño</h2>
           <div class="canvas-controls">
+            <h2 class="panel-titlec">Agregar</h2>
             <div class="tool-wrapper">
               <span class="tool-title">Texto</span>
               <span class="tool-desc">Añade palabras o frases</span>
@@ -134,7 +136,7 @@
             </div>
           </div>
           <ul id="elements-front" class="elements-list"><h3 class="list-title" id="title-front">Elementos agregados – Pecho</h3>
-  <p class="list-desc" id="desc-front">Objetos colocados en la parte frontal.</p></ul>
+  <p class="panel-title" id="desc-front">Objetos colocados en la parte frontal.</p></ul>
           <ul id="elements-back" class="elements-list hidden"><h3>Elementos agregados - Back</h3></ul>
           <ul id="elements-leftsleeve" class="elements-list hidden"><h3>Elementos agregados - Left Sleeve</h3></ul>
           <ul id="elements-rightsleeve" class="elements-list hidden"><h3>Elementos agregados - Right Sleeve</h3></ul>
