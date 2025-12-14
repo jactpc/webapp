@@ -1155,59 +1155,38 @@ fabric.Object.prototype.controls.deleteControl = new fabric.Control({
         ctx.font = `${size}px sans-serif`;
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
-        ctx.fillText("❎", left, top);  // <<<<<< AQUI VA TU EMOJI
+        ctx.fillText("x", left, top);  // <<<<<< AQUI VA TU EMOJI
     }
 });
-fabric.Object.prototype.controls.br = new fabric.Control({
-    x: 0.5,
-    y: 0.5,
-    offsetX: 10,
-    offsetY: 18,
-    cursorStyle: 'se-resize', // cursor de escala
-    sizeX: 25,   // ancho
-    sizeY: 25,   // alto
 
-    render: function(ctx, left, top, styleOverride, fabricObject) {
-        const size = 24; // tamaño del emoji
-        ctx.font = `${size}px sans-serif`;
-        ctx.textAlign = "center";
-        ctx.textBaseline = "middle";
-
-        ctx.fillText("↘️", left, top);  // <<<<<< AQUI VA TU EMOJI
-    },
-
-    actionHandler: fabric.controlsUtils.scalingEqually,
-});
-
-fabric.Object.prototype.controls.rotateControl = new fabric.Control({
-    x: 0.0,
-    y: 0.5,
-    offsetX: 10,
-    offsetY: 18,
-    cursorStyle: 'pointer',
-    sizeX: 25,   // ancho
-    sizeY: 25,   // alto
-    render: function(ctx, left, top, styleOverride, fabricObject) {
-        const size = 24; // tamaño del emoji
-        ctx.font = `${size}px sans-serif`;
-        ctx.textAlign = "center";
-        ctx.textBaseline = "middle";
-
-        ctx.fillText("🔄", left, top);  // <<<<<< AQUI VA TU EMOJI
-    },
-
-    mouseUpHandler: function(eventData, transform) {
-        const target = transform.target;
-
-        // Rota 45 grados
-        target.rotate((target.angle || 0) + 45);
-
-        target.canvas.requestRenderAll();
-        return true;
-    }
-});
 canvases[selectedTab].on('object:added', (e) => {
-    e.target.setControlsVisibility({ mt: true, mb: false, ml: false, mr: false, bl: false, br: true, tl: false, tr: false, mtr: true, deleteControl: true, rotateControl: true, });
+    const obj = e.target;
+    
+    // Ocultar controles específicos
+    obj.setControlsVisibility({
+        mt: false,  // top middle
+        mb: false,  // bottom middle
+        ml: false,  // left middle
+        mr: false,  // right middle
+        bl: false,  // bottom left
+        br: false,  // bottom right
+        tl: false,  // top left
+        tr: false,  // top right
+        mtr: true,  // rotate control
+    });
+    
+    // Opcional: Cambiar color de los controles visibles
+    obj.set({
+        cornerColor: '#2196F3',
+        cornerStrokeColor: '#ffffff',
+        cornerStyle: 'circle',
+        cornerSize: 10,
+        transparentCorners: false,
+        borderColor: '#2196F3',
+        borderScaleFactor: 2,
+        borderOpacityWhenMoving: 0.8,
+        borderDashArray: [5, 5], // línea punteada
+    });
 });
 
 // ——— Exponer funciones globales si se usa inline en HTML ———
@@ -1410,6 +1389,9 @@ function addObjectToList(obj, istext, canvasName) {
 
     // === SOLO PARA TEXTOS ===
     if (obj.type === "i-text" && istext===true) {
+        const currentTextAlign = obj.textAlign || 'left';
+        const currentFontWeight = obj.fontWeight || 'normal';
+        const currentFontStyle = obj.fontStyle || 'normal';
         toolsContainer.innerHTML = `
             <div class="tool-group">
                 <div class="tool-label"><i class="material-icons">text_snippet</i> Texto - ${objectCounter}</div>
@@ -1424,38 +1406,116 @@ function addObjectToList(obj, istext, canvasName) {
                 <input type="color" value="${obj.stroke || "#000000"}" class="text-border">
             </div>
             <div class="tool-group">
-                <div class="tool-label"><i class="material-icons">text_fields</i> Tamaño <span id="text-sizeEl" class="text-size-value">${obj.fontSize}px</span></div>
-                <input type="range" value="${obj.fontSize}" min="10" max="200" class="text-size" id="text-sizeEl">
+                <div class="tool-label"><i class="material-icons">format_align_left</i> Alineación</div>
+                <div class="alignment-buttons">
+                    <button class="align-btn ${currentTextAlign === 'left' ? 'active' : ''}" data-align="left" title="Alinear izquierda">
+                        <i class="material-icons">format_align_left</i>
+                    </button>
+                    <button class="align-btn ${currentTextAlign === 'center' ? 'active' : ''}" data-align="center" title="Alinear centro">
+                        <i class="material-icons">format_align_center</i>
+                    </button>
+                    <button class="align-btn ${currentTextAlign === 'right' ? 'active' : ''}" data-align="right" title="Alinear derecha">
+                        <i class="material-icons">format_align_right</i>
+                    </button>
+                    <button class="align-btn ${currentTextAlign === 'justify' ? 'active' : ''}" data-align="justify" title="Justificar">
+                        <i class="material-icons">format_align_justify</i>
+                    </button>
+                </div>
             </div>
-
             <div class="tool-group">
                 <div class="tool-label"><i class="material-icons">font_download</i> Fuente</div>
                 <select class="text-font">
-                    <option value="Arial">Arial</option>
-                    <option value="VT323">VT323</option>
-                    <option value="Pacifico">Pacifico</option>
-                    <option value="Lato100">Lato (Light)</option>
-                    <option value="Lato900">Lato (Bold)</option>
-                    <option value="Playwrite AU SA">Playwrite AU SA</option>
-                    <option value="Tomorrow">Tomorrow</option>
-                    <option value="Roboto">Roboto</option>
-                    <option value="Montserrat">Montserrat</option>
-                    <option value="Open Sans">Open Sans</option>
-                    <option value="Oswald">Oswald</option>
-                    <option value="Raleway">Raleway</option>
-                    <option value="Merriweather">Merriweather</option>
-                    <option value="Dancing Script">Dancing Script</option>
-                    <option value="Bebas Neue">Bebas Neue</option>
+                    ${(() => {
+            // 1. Define tu lista de fuentes
+            const fontList = [
+                'Arial', 'VT323', 'Pacifico', 'Lato', 
+                'Playwrite AU SA', 'Tomorrow', 'Roboto', 
+                'Montserrat', 'Open Sans', 'Oswald', 
+                'Raleway', 'Merriweather', 'Dancing Script', 
+                'Bebas Neue'
+            ];
+            let optionsHTML = '';
+            
+            // 2. Genera una opción <option> con estilo para cada fuente
+            fontList.forEach(font => {
+                const isSelected = obj.fontFamily === font ? 'selected' : '';
+                // Aplica el estilo 'font-family' directamente a la opción
+                optionsHTML += `<option value="${font}" ${isSelected} style="font-family: '${font}';">${font}</option>`;
+            });
+            return optionsHTML;
+        })()}
                 </select>
             </div>
             <div class="tool-group">
-                <div class="tool-label"></div>
-                <button class="dlt delete-text"><i class="material-icons">delete_forever</i> Eliminar</button>
+                <div class="tool-label"><i class="material-icons">format_bold</i> Estilo</div>
+                <div class="style-buttons">
+                    <button class="style-btn ${currentFontWeight === 'bold' ? 'active' : ''}" data-style="bold" title="Negrita">
+                        <i class="material-icons">format_bold</i>
+                    </button>
+                    <button class="style-btn ${currentFontStyle === 'italic' ? 'active' : ''}" data-style="italic" title="Cursiva">
+                        <i class="material-icons">format_italic</i>
+                    </button>
+                    <button class="style-btn ${obj.underline ? 'active' : ''}" data-style="underline" title="Subrayado">
+                        <i class="material-icons">format_underlined</i>
+                    </button>
+                    <button class="style-btn ${obj.linethrough ? 'active' : ''}" data-style="linethrough" title="Tachado">
+                        <i class="material-icons">strikethrough_s</i>
+                    </button>
+                </div>
+            </div>
+            <div class="tool-group">
+                <div class="tool-label"><i class="material-icons">text_fields</i> Tamaño <span id="text-sizeEl" class="text-size-value">${obj.fontSize}px</span></div>
+                <input type="range" value="${obj.fontSize}" min="10" max="200" class="text-size" id="text-sizeEl">
+            </div>
+            <div class="tool-buttons">
+                <button class="select-btn"><i class="material-icons">crop_free</i></button>
+                <button class="select-dlt"><i class="material-icons">delete_forever</i></button>
             </div>
         `;
         li.querySelector(".text-content").addEventListener("input", (e) => {
             obj.set("text", e.target.value);
             canvases[canvasName].renderAll();
+        });
+            // --- CONTROL DE ALINEACIÓN ---
+        const alignButtons = toolsContainer.querySelectorAll(".align-btn");
+        alignButtons.forEach(button => {
+            button.addEventListener("click", (e) => {
+                const alignment = e.currentTarget.dataset.align;
+                
+                // Remover clase active de todos
+                alignButtons.forEach(btn => btn.classList.remove("active"));
+                // Agregar clase active al botón clickeado
+                e.currentTarget.classList.add("active");
+                
+                obj.set("textAlign", alignment);
+                canvases[canvasName].renderAll();
+                showNotification(`Texto alineado a la ${alignment === 'left' ? 'izquierda' : alignment === 'center' ? 'centro' : alignment === 'right' ? 'derecha' : 'justificado'}`, "info");
+            });
+        });
+        const styleButtons = toolsContainer.querySelectorAll(".style-btn");
+        styleButtons.forEach(button => {
+            button.addEventListener("click", (e) => {
+                const style = e.currentTarget.dataset.style;
+                e.currentTarget.classList.toggle("active");
+                
+                switch(style) {
+                    case 'bold':
+                        obj.set("fontWeight", obj.fontWeight === 'bold' ? 'normal' : 'bold');
+                        break;
+                    case 'italic':
+                        obj.set("fontStyle", obj.fontStyle === 'italic' ? 'normal' : 'italic');
+                        break;
+                    case 'underline':
+                        obj.set("underline", !obj.underline);
+                        break;
+                    case 'linethrough':
+                        obj.set("linethrough", !obj.linethrough);
+                        break;
+                }
+                
+                canvases[canvasName].renderAll();
+                showNotification(`Estilo ${style} ${e.currentTarget.classList.contains('active') ? 'activado' : 'desactivado'}`, "info");
+            });
         });
         // --- CONTROL DE COLOR ---
         toolsContainer.querySelector(".text-color").addEventListener("input", (e) => {
@@ -1500,9 +1560,13 @@ function addObjectToList(obj, istext, canvasName) {
             });
             canvases[canvasName].renderAll();
         });
-
+        toolsContainer.querySelector(".select-btn").addEventListener("click", () => {
+            canvases[canvasName].setActiveObject(obj);
+            canvases[canvasName].renderAll();
+            showNotification("Imagen seleccionada", "info");
+        });
         // --- BOTÓN ELIMINAR ---
-        toolsContainer.querySelector(".delete-text").addEventListener("click", () => {
+        toolsContainer.querySelector(".select-dlt").addEventListener("click", () => {
             const realCanvas = canvases[obj._canvasName];
             realCanvas.remove(obj);
             realCanvas.renderAll();
@@ -1527,6 +1591,7 @@ function addObjectToList(obj, istext, canvasName) {
         toolsContainer.querySelector(".select-btn").addEventListener("click", () => {
             canvases[canvasName].setActiveObject(obj);
             canvases[canvasName].renderAll();
+            showNotification("Imagen seleccionada", "info");
         });
 
         toolsContainer.querySelector(".delete-btn").addEventListener("click", () => {
@@ -1717,5 +1782,4 @@ fetch('emojis.json')
     .then(res => res.json())
     .then(data => {
         window.emojiCategories = data;
-        console.log("Emojis cargados:", data);
 });
