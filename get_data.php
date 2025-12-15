@@ -1,6 +1,6 @@
 <?php
-ini_set("display_errors", 1);
-error_reporting(E_ALL);
+//ini_set("display_errors", 1);
+//error_reporting(E_ALL);
 header('Content-Type: application/json');
 
 $pdo = new PDO("mysql:host=localhost;dbname=camisetas;charset=utf8", "root", "");

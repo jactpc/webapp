@@ -246,67 +246,163 @@ document.addEventListener("DOMContentLoaded", () => {
     loadMaterials();
 });
 function loadMaterials() {
-    fetch("get_data.php?type=step1")
-        .then(res => res.json())
-        .then(data => {
-            loadStep1Materials(data.materials);
-        });
-}
-
-function loadStep1Materials(materials) {
     const container = document.querySelector("#step1-content .type-buttons");
-    container.innerHTML = ""; // limpiar
-
-    materials.forEach(item => {
-        const div = document.createElement("div");
-        div.classList.add("type-button");
-        div.setAttribute("onclick", `selectType("${item.id}", "${item.nombre}", this)`);
-        div.innerHTML = `
-            <img src="img/icon/${item.imgSrc}" alt="">
-            <span>${item.nombre}</span>
-        `;
-        container.appendChild(div);
+    
+    // Mostrar loading para materiales
+    showLoadingState(
+        container, 
+        "Buscando materiales", 
+        "Estamos cargando las mejores opciones para ti...",
+        "materials"
+    );
+    
+    // Deshabilitar navegación mientras carga
+    disableNavigation(true);
+    
+    // Configurar timeout
+    const timeout = 10000;
+    const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error("Tiempo de espera agotado")), timeout);
+    });
+    
+    // Hacer la petición
+    Promise.race([
+        fetch("get_data.php?type=step1"),
+        timeoutPromise
+    ])
+    .then(res => {
+        if (!res.ok) throw new Error(`Error ${res.status}: ${res.statusText}`);
+        return res.json();
+    })
+    .then(data => {
+        // Función para renderizar cada material
+        const renderMaterial = (item) => {
+            const div = document.createElement("div");
+            div.classList.add("type-button");
+            div.setAttribute("onclick", `selectType("${item.id}", "${item.nombre}", this)`);
+            div.innerHTML = `
+                <img src="img/icon/${item.imgSrc}" alt="${item.nombre}">
+                <span>${item.nombre}</span>
+            `;
+            return div;
+        };
+        
+        // Mostrar éxito
+        showSuccessState(
+            container, 
+            data.materials, 
+            renderMaterial,
+            `${data.materials.length} materiales disponibles`
+        );
+        
+        // Habilitar navegación
+        disableNavigation(false);
+    })
+    .catch(error => {
+        showErrorState(container, error, loadMaterials, "Error al cargar materiales");
+        disableNavigation(false);
     });
 }
-function loadStep2Colors(colors) {
-    const container = document.querySelector("#step2-content .color-buttons");
-    container.innerHTML = ""; // limpiar
 
-    colors.forEach(color => {
-        const btn = document.createElement("div");
-        btn.classList.add("color-button");
-        btn.style.background = `#${color.code_back}`;
-        btn.setAttribute("onclick", `selectColor("${color.id}", "${color.nombre}", this)`);
-        btn.id = color.nombre;
-        btn.setAttribute("title", color.nombre);
-        container.appendChild(btn);
-    });
+// Estados visuales separados
+function showLoadingState(container, title = "Cargando", message = "Por favor espera...", type = "default") {
+    if (!container) return;
+    
+    const loadingId = `${type}-loading`;
+    container.innerHTML = `
+        <div class="loading-state" id="${loadingId}">
+            <div class="loading-animation">
+                <div class="dots">
+                    <div class="dot"></div>
+                    <div class="dot"></div>
+                    <div class="dot"></div>
+                </div>
+            </div>
+            <div class="loading-text">
+                <h4>${title}</h4>
+                <p>${message}</p>
+            </div>
+
+        </div>
+    `;
+    
 }
-function loadStep3Sizes(sizes) {
-    const container = document.querySelector("#step3-content .size-buttons");
-    container.innerHTML = ""; // limpiar contenedor
 
-    sizes.forEach(size => {
-        const div = document.createElement("div");
-        div.classList.add("size-button");
-
-        div.innerHTML = `
-            <div class="size-title">${size.nombre}</div>
-
-            <button class="qty-btn minus" data-size="${size.nombre}">–</button>
-
-            <span class="quantity" 
-                  id="quantity-${size.nombre}" 
-                  contenteditable="true">0</span>
-
-            <button class="qty-btn plus" data-size="${size.nombre}">+</button>
-        `;
-
-        container.appendChild(div);
+function showSuccessState(container, items, renderItem, successMessage = null) {
+    if (!container) return;
+    
+    // Limpiar intervalo de progreso si existe
+    if (container.dataset.loadingInterval) {
+        clearInterval(parseInt(container.dataset.loadingInterval));
+        delete container.dataset.loadingInterval;
+    }
+    
+    // Limpiar contenedor
+    container.innerHTML = "";
+    
+    // Si no hay items, mostrar estado vacío
+    if (!items || items.length === 0) {
+        showEmptyState(container, "No hay elementos disponibles");
+        return;
+    }
+    
+    // Renderizar items con efecto de aparición
+    items.forEach((item, index) => {
+        setTimeout(() => {
+            const element = renderItem(item);
+            element.classList.add("fade-in");
+            element.style.animationDelay = `${index * 30}ms`;
+            container.appendChild(element);
+        }, index * 30);
     });
+    
+    // Mostrar notificación de éxito si se especifica
+    if (successMessage) {
+        setTimeout(() => {
+            showNotification(`✓ ${successMessage}`, "success", 2000);
+        }, items.length * 30 + 200);
+    }
+}
 
-    // Después de generar los botones, activar eventos
-    setupSizeQuantityEvents();  
+function showErrorState(container, error, retryFunction, customMessage = null) {
+    if (!container) return;
+    
+    // Limpiar intervalo de progreso si existe
+    if (container.dataset.loadingInterval) {
+        clearInterval(parseInt(container.dataset.loadingInterval));
+        delete container.dataset.loadingInterval;
+    }
+    
+    const errorMessage = customMessage || "No pudimos cargar los datos";
+    
+    container.innerHTML = `
+        <div class="error-state">
+            <div class="error-icon">
+                <i class="material-icons">error_outline</i>
+            </div>
+            <h4>Error de conexión</h4>
+            <p>${errorMessage}</p>
+            <p class="error-detail">${error.message || "Error desconocido"}</p>
+            <div class="error-actions">
+                ${retryFunction ? `
+                <button onclick="${retryFunction.name}()" class="btn-primary">
+                    <i class="material-icons">refresh</i> Reintentar
+                </button>
+                ` : ''}
+            </div>
+        </div>
+    `;
+}
+function showEmptyState(container, message = "No hay elementos disponibles") {
+    container.innerHTML = `
+        <div class="empty-state">
+            <div class="empty-icon">
+                <i class="material-icons">inbox</i>
+            </div>
+            <h4>Sin resultados</h4>
+            <p>${message}</p>
+        </div>
+    `;
 }
 </script>
 </body>
