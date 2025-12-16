@@ -50,7 +50,8 @@ else if ($type === "sizes" && !empty($material) && !empty($color)) {
 
     $stmt = $pdo->prepare("
         SELECT LPAD(tallas_polera.id, 4, '0') as id,
-               tallas_polera.nombre as nombre
+               tallas_polera.nombre as nombre,
+               TRUNCATE(medidasx, 0) as x, TRUNCATE(medidasy, 0) as y
         FROM tallas_polera
         JOIN stock_polera ON tallas_polera.id = stock_polera.id_tallas
         WHERE LPAD(stock_polera.id_material, 4, '0') = ?

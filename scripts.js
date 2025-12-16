@@ -267,9 +267,13 @@ function selectColor(color, nombre, element) {
                     div.classList.add("size-button");
                     div.innerHTML = `
                         <div class="size-title">${size.nombre}</div>
-                        <button class="qty-btn minus" data-size="${size.nombre}">–</button>
+                        
                         <span class="quantity" id="quantity-${size.nombre}" contenteditable="true">0</span>
+                        <div>
+                        <button class="qty-btn minus" data-size="${size.nombre}">–</button>
                         <button class="qty-btn plus" data-size="${size.nombre}">+</button>
+                        </div>
+                        <div class="size">${size.x}x${size.y}cm</div>
                     `;
                     return div;
                 };
@@ -647,7 +651,10 @@ function restoreSection(section) {
     const json = sectionsState[section].json || { objects: [] };
     canvas.loadFromJSON(json, () => {
         loadBackground(section);
-        drawDesignArea(section);
+        const widthCm = 50;
+        const heightCm = 80;
+        drawDesignArea(section, `${widthCm} × ${heightCm} cm Max`);
+        //drawDesignArea(section);
         canvas.renderAll();
     });
 }
@@ -658,6 +665,12 @@ const canvasLists = {
     "back": document.getElementById("elements-back"),
     "leftsleeve": document.getElementById("elements-leftsleeve"),
     "rightsleeve": document.getElementById("elements-rightsleeve")
+};
+const canvasListsTitle = {
+    "front": document.getElementById("title-front"),
+    "back": document.getElementById("title-back"),
+    "leftsleeve": document.getElementById("title-leftsleeve"),
+    "rightsleeve": document.getElementById("title-rightsleeve")
 };
 // ——— Cambio de pestaña ———
 function switchTab(tab) {
@@ -689,6 +702,7 @@ function switchTab(tab) {
     Object.keys(canvasLists).forEach(section => {
         if (canvasLists[section]) {
             canvasLists[section].style.display = (section === tab) ? "block" : "none";
+            canvasListsTitle[section].style.display = (section === tab) ? "block" : "none";
         }
     });
     updateMiniMap();
@@ -783,7 +797,38 @@ function updateTextBorder() {
     }
 }
 
-// ——— Imágenes ———
+function addImageToCanvas(imgElement, options = {}) {
+    const canvas = canvases[selectedTab];
+
+    const imgW = imgElement.width;
+    const imgH = imgElement.height;
+
+    const scaleX = (canvas.width * 0.5) / imgW;
+    const scaleY = (canvas.height * 0.5) / imgH;
+    const scale = Math.min(scaleX, scaleY);
+
+    const img = new fabric.Image(imgElement, {
+        scaleX: scale,
+        scaleY: scale,
+        originX: 'center',
+    originY: 'center',
+        ...options
+    });
+
+    // Centrar
+    img.left = canvas.width / 2;
+img.top  = canvas.height / 2;
+    img.id   = generateObjectId();
+
+    canvas.add(img);
+    canvas.setActiveObject(img);
+    canvas.renderAll();
+
+    addObjectToList(img, false, selectedTab);
+
+    return img;
+}
+
 function addImageFile() {
     const input = document.createElement('input');
     input.type = 'file';
@@ -792,40 +837,49 @@ function addImageFile() {
     input.onchange = (event) => {
         const file = event.target.files[0];
         if (!file) return;
+
         const reader = new FileReader();
         reader.onload = (e) => {
             const imgElement = new Image();
             imgElement.src = e.target.result;
-            imgElement.onload = function () {
-                const canvas = canvases[selectedTab];
-                const imgW = imgElement.width;
-                const imgH = imgElement.height;
-                const scaleX = (canvas.width * 0.5) / imgW;
-                const scaleY = (canvas.height * 0.5) / imgH;
-                const scale = Math.min(scaleX, scaleY);
 
-                const img = new fabric.Image(imgElement, {
-                scaleX: scale,
-                scaleY: scale,
-                });
-
-                // Centrar
-                img.left = (canvas.width - img.width * scale) / 2;
-                img.top = (canvas.height - img.height * scale) / 2.5;
-                img.id = generateObjectId();
-                canvas.add(img);
-                canvas.setActiveObject(img); // opcional, selecciona la imagen
-                canvas.renderAll();
-                addObjectToList(img, false, selectedTab);
-
-                uploadImageToServer(file); // opcional, requiere backend
+            imgElement.onload = () => {
+                addImageToCanvas(imgElement);
+                uploadImageToServer(file); // se mantiene
                 showNotification("Imagen agregada!", "success");
             };
         };
         reader.readAsDataURL(file);
     };
+
     input.click();
 }
+
+function loadImageFromURL() {
+    const urlInput = document.getElementById('image-url');
+    const url = urlInput.value.trim();
+
+    if (!url) {
+        showNotification("Por favor ingresa una URL válida", "warning");
+        return;
+    }
+
+    const imgElement = new Image();
+    imgElement.crossOrigin = "anonymous";
+
+    imgElement.onload = () => {
+        addImageToCanvas(imgElement);
+        closeImageModal();
+        showNotification("Imagen cargada desde URL", "success");
+    };
+
+    imgElement.onerror = () => {
+        showNotification("Error al cargar la imagen desde la URL", "error");
+    };
+
+    imgElement.src = url;
+}
+
 function addImage() {
     // Mostrar diálogo con opciones antes de subir
     const imageModal = document.createElement('div');
@@ -875,53 +929,6 @@ function closeImageModal() {
     const modal = document.querySelector('.image-modal');
     if (modal) modal.remove();
     document.body.style.overflow = "auto";
-}
-
-function loadImageFromURL() {
-    const urlInput = document.getElementById('image-url');
-    const url = urlInput.value.trim();
-    
-    if (!url) {
-        showNotification("Por favor ingresa una URL válida", "warning");
-        return;
-    }
-    
-    const imgElement = new Image();
-    imgElement.crossOrigin = "anonymous"; // Para evitar problemas CORS
-    
-    imgElement.onload = function() {
-        const canvas = canvases[selectedTab];
-        
-        // Calcular escala para que ocupe 30% del ancho del canvas
-        const targetWidth = canvas.width * 0.3;
-        const scale = targetWidth / imgElement.width;
-        
-        const img = new fabric.Image(imgElement, {
-            left: canvas.width / 2,
-            top: canvas.height / 2,
-            scaleX: scale,
-            scaleY: scale,
-            originX: 'center',
-            originY: 'center',
-            _originalScale: scale,
-            _currentPercentage: 100
-        });
-        
-        canvas.add(img);
-        canvas.setActiveObject(img);
-        canvas.renderAll();
-        
-        addObjectToList(img, false, selectedTab);
-        closeImageModal();
-        
-        showNotification("Imagen cargada desde URL", "success");
-    };
-    
-    imgElement.onerror = function() {
-        showNotification("Error al cargar la imagen desde la URL", "error");
-    };
-    
-    imgElement.src = url;
 }
 
 function updateImageBorder() {
@@ -1190,7 +1197,9 @@ function updateMiniMap(force = false) {
                                             selectable: false,
                                             evented: false,
                                             hasControls: false,
-                                            hasBorders: false
+                                            hasBorders: false,
+                                            originX: 'center',
+                                            originY: 'center'
                                         });
                                         
                                         miniMapCanvas.add(miniImg);
@@ -1206,50 +1215,6 @@ function updateMiniMap(force = false) {
                                 }
                             });
                             objectPromises.push(imgPromise);
-                            
-                        } else if (obj.type === 'rect' || obj.type === 'circle' || obj.type === 'triangle') {
-                            // Para formas básicas
-                            const clonePromise = new Promise((resolve) => {
-                                obj.clone((clone) => {
-                                    clone.set({
-                                        left: miniLeft,
-                                        top: miniTop,
-                                        scaleX: (obj.scaleX || 1) * scale,
-                                        scaleY: (obj.scaleY || 1) * scale,
-                                        angle: obj.angle || 0,
-                                        opacity: obj.opacity || 0.8,
-                                        selectable: false,
-                                        evented: false,
-                                        hasControls: false,
-                                        hasBorders: false
-                                    });
-                                    miniMapCanvas.add(clone);
-                                    resolve();
-                                });
-                            });
-                            objectPromises.push(clonePromise);
-                            
-                        } else {
-                            // Para otros tipos de objetos
-                            const clonePromise = new Promise((resolve) => {
-                                obj.clone((clone) => {
-                                    clone.set({
-                                        left: miniLeft,
-                                        top: miniTop,
-                                        scaleX: (obj.scaleX || 1) * scale,
-                                        scaleY: (obj.scaleY || 1) * scale,
-                                        angle: obj.angle || 0,
-                                        opacity: obj.opacity || 0.8,
-                                        selectable: false,
-                                        evented: false,
-                                        hasControls: false,
-                                        hasBorders: false
-                                    });
-                                    miniMapCanvas.add(clone);
-                                    resolve();
-                                });
-                            });
-                            objectPromises.push(clonePromise);
                         }
                     });
                     
@@ -1369,8 +1334,6 @@ function updateZoomSliderValue(zoom) {
         }
     }
 }
-// Reemplaza TODOS estos event listeners por una versión optimizada:
-
 // Configura eventos optimizados para los canvases
 function setupOptimizedCanvasEvents() {
     Object.keys(canvases).forEach((key) => {
@@ -1707,7 +1670,7 @@ Object.values(canvases).forEach((canvas) => {
 
 Object.values(canvases).forEach((canvas) => {
     const canvasEl = canvas.upperCanvasEl;
-let touchOnObject = false;
+    let touchOnObject = false;
     let lastDistance = 0;
     let isPinching = false;
     let isPanning = false;
@@ -1841,13 +1804,12 @@ const designAreas = {
     leftsleeve: { x: 290, y: 120, width: 170, height: 200 },
     rightsleeve: { x: 160, y: 120, width: 170, height: 200 }
 };
-function drawDesignArea(section) {
+function drawDesignArea(section, labelText = '') {
     const canvas = canvases[section];
     
     // Si ya existe un rectángulo, removerlo primero
-    if (canvas._designAreaRect) {
-        canvas.remove(canvas._designAreaRect);
-    }
+    if (canvas._designAreaRect) canvas.remove(canvas._designAreaRect);
+    if (canvas._designAreaLabel) canvas.remove(canvas._designAreaLabel);
     
     const area = designAreas[section];
 
@@ -1870,14 +1832,30 @@ function drawDesignArea(section) {
         hoverCursor: 'default',
         name: 'designArea'
     });
+    const label = new fabric.Text(labelText, {
+        left: area.x + area.width / 2,
+        top: area.y - 16, // ⬅️ arriba del rectángulo
+        originX: 'center',
+        originY: 'bottom',
+        fontSize: 14,
+        fontWeight: 'bold',
+        fill: '#FF9800',
+        backgroundColor: 'rgba(0,0,0,0.6)',
+        padding: 4,
+        selectable: false,
+        evented: false,
+        name: 'designAreaLabel'
+    });
 
     canvas.add(rect);
+    canvas.add(label);
     
     // Guardar referencia al rectángulo en el canvas
     canvas._designAreaRect = rect;
     
     // Enviar al frente (pero detrás de los objetos de usuario)
     canvas.sendToBack(rect);
+    canvas.bringToFront(label);
     
     canvas.renderAll();
     return rect;
@@ -2170,7 +2148,11 @@ function addObjectToList(obj, istext, canvasName) {
             <div class="tool-label"><i class="material-icons">photo_size_select_large</i> Tamaño 
                 <span class="img-size-value">${Math.round(initialScale)}%</span>
             </div>
-            <input type="range" class="img-size-slider" min="10" max="300" value="${Math.round(initialScale)}">
+            <div class="size-controls">
+                <button class="size-btn size-minus">−</button>
+                <input type="range" class="img-size-slider" min="1" max="200" value="${Math.round(initialScale)}">
+                <button class="size-btn size-plus">+</button>
+            </div>
         </div>
         <div class="tool-group">
             <div class="tool-label"><i class="material-icons">rotate_right</i> Rotación
@@ -2184,11 +2166,11 @@ function addObjectToList(obj, istext, canvasName) {
             </div>
         </div>
         <div class="tool-buttons">
-            <button class="delete-btn">Eliminar</button>
+            <button class="select-dlt">Eliminar</button>
         </div>
         `;
 
-        toolsContainer.querySelector(".delete-btn").addEventListener("click", () => {
+        toolsContainer.querySelector(".select-dlt").addEventListener("click", () => {
             canvases[canvasName].remove(obj);
             canvases[canvasName].renderAll();
             li.remove();
@@ -2197,28 +2179,48 @@ function addObjectToList(obj, istext, canvasName) {
         // === SLIDER PARA EL TAMAÑO ===
         const slider = toolsContainer.querySelector(".img-size-slider");
         const sizeLabel = toolsContainer.querySelector(".img-size-value");
+        const btnPlus = toolsContainer.querySelector(".size-plus");
+        const btnMinus = toolsContainer.querySelector(".size-minus");
+        const MIN = 1;
+        const MAX = 200;
+        const STEP = 5;
+        function applySize(percentage) {
+            percentage = Math.max(MIN, Math.min(MAX, percentage));
+
+            const originalScale = obj._originalScale || 1;
+            const newScale = originalScale * (percentage / 100);
+
+            obj.scale(newScale);
+            obj._currentPercentage = percentage;
+
+            slider.value = percentage;
+            sizeLabel.textContent = percentage + "%";
+
+            canvases[canvasName].setActiveObject(obj);
+            canvases[canvasName].renderAll();
+        }
 
         slider.addEventListener("input", (e) => {
-        const percentage = parseInt(e.target.value);
-        const originalScale = obj._originalScale || 1;
-        const newScale = originalScale * (percentage / 100);
-        
-        obj.scale(newScale);
-        sizeLabel.textContent = percentage + "%";
-        obj._currentPercentage = percentage;
-        
-        canvases[canvasName].setActiveObject(obj);
-        canvases[canvasName].renderAll();
-    });
-    // === SLIDER PARA LA ROTACIÓN ===
+            applySize(parseInt(e.target.value));
+        });
+        btnPlus.addEventListener("click", () => {
+            applySize(parseInt(slider.value) + STEP);
+        });
+
+        btnMinus.addEventListener("click", () => {
+            applySize(parseInt(slider.value) - STEP);
+        });
+
+        // === SLIDER PARA LA ROTACIÓN ===
         const rotationSlider = toolsContainer.querySelector(".rotation-slider");
         const rotationLabel = toolsContainer.querySelector(".rotation-value");
 
         rotationSlider.addEventListener("input", (e) => {
             const angle = parseInt(e.target.value);
-            obj.set('angle', angle);  // Usar set() para cambiar el ángulo
+            obj.set({ angle: angle });
             rotationLabel.textContent = angle + "°";
             canvases[canvasName].setActiveObject(obj);
+            obj.setCoords();
             canvases[canvasName].renderAll();
         });
 
@@ -2231,9 +2233,10 @@ function addObjectToList(obj, istext, canvasName) {
         rotateLeftBtn.addEventListener("click", () => {
             const currentAngle = obj.angle || 0;
             const newAngle = (currentAngle - 90) % 360;
-            obj.set('angle', newAngle);
+            obj.set({ angle: newAngle });
             rotationSlider.value = newAngle;
             rotationLabel.textContent = Math.round(newAngle) + "°";
+            obj.setCoords();
             canvases[canvasName].renderAll();
             showNotification("Rotado 90° a la izquierda", "info");
         });
@@ -2242,9 +2245,10 @@ function addObjectToList(obj, istext, canvasName) {
         rotateRightBtn.addEventListener("click", () => {
             const currentAngle = obj.angle || 0;
             const newAngle = (currentAngle + 90) % 360;
-            obj.set('angle', newAngle);
+            obj.set({ angle: newAngle });
             rotationSlider.value = newAngle;
             rotationLabel.textContent = Math.round(newAngle) + "°";
+            obj.setCoords();
             canvases[canvasName].renderAll();
             showNotification("Rotado 90° a la derecha", "info");
         });
@@ -2254,6 +2258,7 @@ function addObjectToList(obj, istext, canvasName) {
             obj.set('angle', 0);
             rotationSlider.value = 0;
             rotationLabel.textContent = "0°";
+            obj.setCoords();
             canvases[canvasName].renderAll();
             showNotification("Rotación restablecida", "info");
         });
@@ -2437,6 +2442,11 @@ function addEmojiToCanvas(emoji) {
         fontSize: 80,
         fontFamily: "Noto Color Emoji, EmojiOne, sans-serif",
         editable: false,
+
+        selectable: true,
+        evented: true,
+
+        lockScalingFlip: true
     });
 
     canvas.add(emojiObj);

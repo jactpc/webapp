@@ -62,7 +62,7 @@
     <!-- Step 2: Color Selection -->
     <div class="feature-card" id="step2-content">
       <h3>Paso 2: Elige el Color de tu Camiseta</h3>
-      <p>Selecciona el color base para tu camiseta personalizada.</p>
+      <p>Selecciona el color base para tu Polera personalizada.</p>
       <div class="color-buttons"></div>
       <div class="step-validation" id="step2-validation">Por favor, selecciona un color para continuar</div>
     </div>
@@ -135,11 +135,22 @@
               <button class="button controlsbtn" title="Agregar emoji" onclick="addEmoji()">😀</button>
             </div>
           </div>
-          <ul id="elements-front" class="elements-list"><h3 class="list-title" id="title-front">Elementos agregados – Pecho</h3>
-  <p class="panel-title" id="desc-front">Objetos colocados en la parte frontal.</p></ul>
-          <ul id="elements-back" class="elements-list hidden"><h3>Elementos agregados - Back</h3></ul>
-          <ul id="elements-leftsleeve" class="elements-list hidden"><h3>Elementos agregados - Left Sleeve</h3></ul>
-          <ul id="elements-rightsleeve" class="elements-list hidden"><h3>Elementos agregados - Right Sleeve</h3></ul>
+          <div>
+            <h3 class="list-title" id="title-front">Elementos agregados – Pecho</h3>
+            <ul id="elements-front" class="elements-list"><p class="panel-title" id="desc-front">Objetos colocados en la parte frontal.</p></ul>
+          </div>
+          <div>
+            <h3 class="list-title hidden" id="title-back">Elementos agregados - Back</h3>
+            <ul id="elements-back" class="elements-list hidden"></ul>
+          </div>
+          <div>
+            <h3 class="list-title hidden" id="title-leftsleeve">Elementos agregados - Left Sleeve</h3>
+            <ul id="elements-leftsleeve" class="elements-list hidden"></ul>
+          </div>
+          <div>
+            <h3 class="list-title hidden" id="title-rightsleeve">Elementos agregados - Right Sleeve</h3>
+            <ul id="elements-rightsleeve" class="elements-list hidden"></ul>
+          </div>
         </div>
       </div>
       <div class="step-validation" id="step4-validation">Puedes personalizar tu diseño o continuar con el diseño básico</div>

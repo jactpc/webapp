@@ -43,8 +43,9 @@ button, .tab, .controlsbtn, .size-button, .color-button {
 }
 
 .color-button.active, .type-button.active {
-  background: #4a90e2;;
-  border: 2px solid #000000;
+  border: 1px solid #007fff !important;
+  box-shadow: inset 0 -3px 0 #2196f3;
+  font-weight: bold;
 }
 
 .color-black { background: black; }
@@ -58,24 +59,22 @@ button, .tab, .controlsbtn, .size-button, .color-button {
   padding: 10px;
 }
 .type-button{
-  background: #9a9a9a;;
+  background: #eaeaea;
   width: 268px;
   flex-basis: min-content;
   cursor: pointer;
-  color: #ffffff;
-  font-weight: bold;
-  box-shadow: inset 0 -3px 0 black;
+  color: black;
   border-radius: 10px;
+  border: 1px solid black;
 }
 .size-button {
   background: #f0f0f0;
   width: 60px;
-
   text-align: center;
   position: relative;
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 4px;
   flex-wrap: wrap;
   justify-content: center;
 }
@@ -149,7 +148,7 @@ button, .tab, .controlsbtn, .size-button, .color-button {
 /* ======== Mini map y zoom ======== */
 .mini-map-container {
   width: 175px;
-  position: fixed;
+  position: absolute;
   bottom: 9px;
   right: 10px;
   border: 2px solid #ddd;
@@ -209,6 +208,7 @@ button, .tab, .controlsbtn, .size-button, .color-button {
   gap: 20px;
   width: 100%;
   max-width: 1200px;
+  min-height: 150px;
 }
 .feature-card {
   background: #fff;
@@ -412,9 +412,9 @@ button, .tab, .controlsbtn, .size-button, .color-button {
     color: #fff;
     font-weight: bold;
     box-shadow: 0px 3px 6px rgba(0,0,0,0.2);
-    z-index: 9999;
     opacity: 0;
     transition: opacity 0.3s ease;
+    z-index: 11000;
     }
     
     @keyframes slideInRight {
@@ -514,7 +514,6 @@ button.select-dlt:hover {
     padding: 0;
 }
 .elements-list li {
-    background: #fff;
     padding: 10px;
     margin-bottom: 8px;
     display: flex;
@@ -670,6 +669,7 @@ button.select-dlt:hover {
   font-weight: bold;
 }
 
+
 .list-desc {
   font-size: 12px;
   color: #555;
@@ -702,7 +702,10 @@ button.select-dlt:hover {
 }
 .size-title{
   font-size: 16px;
-  padding: 5px;
+  width: 100%;
+}
+.size{
+  font-size: 14px;
   width: 100%;
 }
 .tools{
@@ -735,8 +738,8 @@ button.select-dlt:hover {
   @media (min-width: 769px) {
     .color-button, .size-button { font-size: 18px; }
     .size-button .quantity { font-size: 26px; }
-    .canvas-left{ width: 65%;}
-    .canvas-right{ width: 35%;}
+    .canvas-left{ width: 65%; position: relative; }
+    .canvas-right{ width: 35%; }
     .features { padding: 20px 0; }
     .steps-container {padding: 0 20px;}
     #preview-container div {width: 161px;}
@@ -750,7 +753,7 @@ button.select-dlt:hover {
   }
   @media (max-width: 768px) {
     .color-button { width: 50px; height: 50px; }
-    .size-button { font-size: 12px; padding: 5px; width: 45px; }
+    .size-button { font-size: 12px; padding: 5px; width: 56px; ; }
     .tab { font-size: 22px; padding: 8px; }
     .tab-title {font-size: 14px; padding: 4px;}
     .hero h1 { font-size: 2em; }
@@ -760,10 +763,10 @@ button.select-dlt:hover {
     .editor-container{flex-direction: column;align-items: center;}
     .canvas-left{ width: 80%;}
     .mini-map-container{ display: none; }
-    .canvas-right{ font-size: 14px; font-weight: bold; padding: 0; position: fixed; bottom: 0; width: 98%; border: 3px solid #ff00007d; max-height: 300px; border-radius: 14px 14px 0 0; margin: 0 10px; border-bottom: 0px; padding: 0;}
+    .canvas-right{ font-size: 14px; font-weight: bold; padding: 0; position: fixed; bottom: 0; width: 98%; box-shadow: 0 0 5px 2px #0056b3; max-height: 300px; border-radius: 14px 14px 0 0; margin: 0 10px; border-bottom: 0px; padding: 0;}
     .panel-title{ font-size: 12px; display: none;}
     .canvas-controls{ position: fixed; top: 9%; border: 2px solid #c0c0c061;; height: 263px; background: white; border-radius: 5px; padding: 2px; flex-direction: column;}
-    .elements-list{ height: 200px; margin: 0; overflow-y: scroll; min-height: 150px; }
+    .elements-list{ max-height: 300px; margin: 0; overflow-y: scroll; animation: fadeInUp 0.5s ease forwards;}
     .tool-wrapper { margin: 2px; }
     .tool-wrapper .tool-desc{ display: none; }
     .panel-titlec {display: block;font-size: 11px;}
@@ -779,7 +782,7 @@ button.select-dlt:hover {
     .hero2{width: 100%;}
     .canvas-container { max-height: 380px; }
     .canvas-controls { bottom: 5px; left: 5px; }
-    .size-button { font-size: 10px; width: 40px; }
+    .size-button { font-size: 10px;}
     .tab { font-size: 15px; }
     .feature-card {padding: 7px;}
     .footer{max-width: 100%; }
@@ -1035,4 +1038,43 @@ button.select-dlt:hover {
 
 .center-btn:hover {
     background: #388E3C;
+}
+.highlighted-temporary {
+    animation: parpadeoCompleto 0.8s infinite alternate;
+    background-color: #fff3cd; /* color amarillo suave */
+    border: 2px solid #ffc107;
+}
+
+@keyframes parpadeoCompleto {
+    from {
+        opacity: 1;
+        transform: scale(1);
+        box-shadow: 0 0 15px rgba(255, 193, 7, 0.8);
+    }
+    to {
+        opacity: 0.7;
+        transform: scale(1.02);
+        box-shadow: 0 0 25px rgba(255, 193, 7, 0.9);
+    }
+}
+.size-controls {
+    display: flex;
+    align-items: center;
+    gap: 1px;
+}
+
+.size-btn {
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+    font-size: 18px;
+    font-weight: bold;
+    background: #444;
+    color: #fff;
+}
+
+.size-btn:hover {
+    background: #666;
 }
