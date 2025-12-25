@@ -79,21 +79,11 @@
       <p>Agrega texto, imágenes o logos de tu preferencia.</p>
       <div class="editor-container">
         <div class="canvas-left">
-          <div class="canvas-container tshit_container" id="front-canvas-container">
-            <canvas id="front-canvas" width="620" height="800"></canvas>
-          </div>
-          <div class="canvas-container tshit_container hidden" id="back-canvas-container">
-            <canvas id="back-canvas" width="620" height="800"></canvas>
-          </div>
-          <div class="canvas-container tshit_container hidden" id="leftsleeve-canvas-container">
-            <canvas id="leftsleeve-canvas" width="620" height="800"></canvas>
-          </div>
-          <div class="canvas-container tshit_container hidden" id="rightsleeve-canvas-container">
-            <canvas id="rightsleeve-canvas" width="620" height="800"></canvas>
+          <div class="canvases-container tshit_container" id="canvases-container">
           </div>
           <div class="mini-map-container">
             <i class="material-icons btnzoom" onclick="zoomOut()">zoom_out</i>
-              <input style="width: 79px;" id="zoom-slider" type="range" min="0.2" max="4" step="0.01" value="1" class="zoom-slider">
+              <input style="width: 79px;" id="zoom-slider" type="range" min="0.6" max="3" step="0.01" value="1" class="zoom-slider">
             <i class="material-icons btnzoom" onclick="zoomIn()">zoom_in</i>
             <i class="material-icons btnzoom" id="reset-zoom" onclick="resetZoom()">zoom_in_map</i>
             <canvas id="mini-map" width="175" height="200"></canvas>
@@ -101,21 +91,10 @@
         </div>
         <div class="canvas-right">
           <h2 class="panel-title">Ubicacion del estampado</h2>
-          <div class="tabs">
-            <div class="tab active" data-tab="front" onclick="switchTab('front')">
-              <span class="tab-title">Pecho</span>
+          <!-- Tabs dinámicos -->
+            <div class="tabs" id="tabs-container">
+                <!-- Los tabs se crearán aquí dinámicamente -->
             </div>
-            <div class="tab" data-tab="back" onclick="switchTab('back')">
-              <span class="tab-title">Espalda</span>
-            </div>
-            <div class="tab" data-tab="leftsleeve" onclick="switchTab('leftsleeve')">
-              <span class="tab-title">Manga Izq.</span>
-            </div>
-
-            <div class="tab" data-tab="rightsleeve" onclick="switchTab('rightsleeve')">
-              <span class="tab-title">Manga Der.</span>
-            </div>
-          </div>
           <h2 class="panel-title">Herramientas de Diseño</h2>
           <div class="canvas-controls">
             <h2 class="panel-titlec">Agregar</h2>
@@ -135,22 +114,9 @@
               <button class="button controlsbtn" title="Agregar emoji" onclick="addEmoji()">😀</button>
             </div>
           </div>
-          <div>
-            <h3 class="list-title" id="title-front">Elementos agregados – Pecho</h3>
-            <ul id="elements-front" class="elements-list"><p class="panel-title" id="desc-front">Objetos colocados en la parte frontal.</p></ul>
-          </div>
-          <div>
-            <h3 class="list-title hidden" id="title-back">Elementos agregados - Back</h3>
-            <ul id="elements-back" class="elements-list hidden"></ul>
-          </div>
-          <div>
-            <h3 class="list-title hidden" id="title-leftsleeve">Elementos agregados - Left Sleeve</h3>
-            <ul id="elements-leftsleeve" class="elements-list hidden"></ul>
-          </div>
-          <div>
-            <h3 class="list-title hidden" id="title-rightsleeve">Elementos agregados - Right Sleeve</h3>
-            <ul id="elements-rightsleeve" class="elements-list hidden"></ul>
-          </div>
+          <div id="elements-lists">
+                <!-- Las listas de elementos se crearán aquí dinámicamente -->
+            </div>
         </div>
       </div>
       <div class="step-validation" id="step4-validation">Puedes personalizar tu diseño o continuar con el diseño básico</div>
@@ -164,23 +130,8 @@
         <div class="preview-section">
           <h4>Previsualización de tu Diseño</h4>
           <div id="preview-container" class="grid grid-cols-2 gap-2">
-            <div>
-              <h4>Pecho</h4>
-              <canvas id="preview-front" width="180" height="220" class="border" onclick="switchTab('front')"></canvas>
-            </div>
-            <div>
-              <h4>Espalda</h4>
-              <canvas id="preview-back" width="180" height="220" class="border" onclick="switchTab('back')"></canvas>
-            </div>
-            <div>
-              <h4>Lado Izq.</h4>
-              <canvas id="preview-leftsleeve" width="180" height="220" class="border" onclick="switchTab('leftsleeve')"></canvas>
-            </div>
-            <div>
-              <h4>Lado Der.</h4>
-              <canvas id="preview-rightsleeve" width="180" height="220" class="border" onclick="switchTab('rightsleeve')"></canvas>
-            </div>
-          </div>
+            <!-- Los previews se crearán aquí dinámicamente -->
+        </div>
         </div>
       
     <div class="order-summary">
@@ -256,65 +207,6 @@
 document.addEventListener("DOMContentLoaded", () => {
     loadMaterials();
 });
-function loadMaterials() {
-    const container = document.querySelector("#step1-content .type-buttons");
-    
-    // Mostrar loading para materiales
-    showLoadingState(
-        container, 
-        "Buscando materiales", 
-        "Estamos cargando las mejores opciones para ti...",
-        "materials"
-    );
-    
-    // Deshabilitar navegación mientras carga
-    disableNavigation(true);
-    
-    // Configurar timeout
-    const timeout = 10000;
-    const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error("Tiempo de espera agotado")), timeout);
-    });
-    
-    // Hacer la petición
-    Promise.race([
-        fetch("get_data.php?type=step1"),
-        timeoutPromise
-    ])
-    .then(res => {
-        if (!res.ok) throw new Error(`Error ${res.status}: ${res.statusText}`);
-        return res.json();
-    })
-    .then(data => {
-        // Función para renderizar cada material
-        const renderMaterial = (item) => {
-            const div = document.createElement("div");
-            div.classList.add("type-button");
-            div.setAttribute("onclick", `selectType("${item.id}", "${item.nombre}", this)`);
-            div.innerHTML = `
-                <img src="img/icon/${item.imgSrc}" alt="${item.nombre}">
-                <span>${item.nombre}</span>
-            `;
-            return div;
-        };
-        
-        // Mostrar éxito
-        showSuccessState(
-            container, 
-            data.materials, 
-            renderMaterial,
-            `${data.materials.length} materiales disponibles`
-        );
-        
-        // Habilitar navegación
-        disableNavigation(false);
-    })
-    .catch(error => {
-        showErrorState(container, error, loadMaterials, "Error al cargar materiales");
-        disableNavigation(false);
-    });
-}
-
 // Estados visuales separados
 function showLoadingState(container, title = "Cargando", message = "Por favor espera...", type = "default") {
     if (!container) return;

@@ -740,7 +740,7 @@ button.select-dlt:hover {
     .size-button .quantity { font-size: 26px; }
     .canvas-left{ width: 65%; position: relative; }
     .canvas-right{ width: 35%; }
-    .features { padding: 20px 0; }
+    .features { padding: 0 0 20px 0; }
     .steps-container {padding: 0 20px;}
     #preview-container div {width: 161px;}
     .feature-card{margin: 0 20px}
@@ -749,7 +749,7 @@ button.select-dlt:hover {
     .panel-titlec { display: none;}
     .tab-title { padding: 7px; width: 35px; display: flex; flex-direction: row; justify-content: center;}
     .tools { gap: 3px;}
-    .elements-list {height: 574px; overflow-y: scroll; margin: 1px;}
+    .elements-list {height: 500px; overflow-y: scroll; margin: 1px;}
   }
   @media (max-width: 768px) {
     .color-button { width: 50px; height: 50px; }

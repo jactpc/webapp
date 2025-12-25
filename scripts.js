@@ -1,3 +1,4 @@
+let designAssets = {};
 let currentStep = 1;
 const totalSteps = 5;
 let selectedColor = null;
@@ -7,13 +8,214 @@ let selectedMaterialText = null;
 let designData = {
     color: null,
     sizes: {},
-    design: {
-        front: { objects: [] },
-        back: { objects: [] },
-        leftsleeve: { objects: [] },
-        rightsleeve: { objects: [] }
-    }
+    design: {} // ← Ahora será dinámico
 };
+let canvases = null;
+let selectedTab = '';
+let currentColor = '';
+
+// Estado por sección
+let sectionsState = {};
+
+// Canvases de preview
+let previews = null;
+
+// Mini-mapa
+let miniMapCanvas = null;
+let isMiniMapUpdating = false;
+let miniMapUpdateTimeout = null;
+let lastMiniMapUpdate = 0;
+let isDraggingMiniMap = false;
+
+// Zoom
+const MIN_ZOOM = 0.6;
+const MAX_ZOOM = 3;
+let zoomFromDatabase = 1.4;
+let zoomSlider = null;
+
+// Design areas
+let designAreas = {};
+
+// Canvas lists
+let canvasLists = null;
+let canvasListsTitle = null;
+
+// Fuentes
+const fonts = [
+    { name: 'Tomorrow', url: 'https://fonts.gstatic.com/s/tomorrow/v17/WBLhrETNbFtZCeGqgR0dWnXBDMWDikd56VY.woff2' },
+    { name: 'Playwrite AU SA', url: 'https://fonts.gstatic.com/s/playwriteausa/v4/YcmhsZpNS1SdgmHbGgtRuUElnR3CmSC5bVQVlrclpZgRcuBjDIV1.woff2' },
+    { name: 'Lato900', url: 'https://fonts.gstatic.com/s/lato/v24/S6u9w4BMUTPHh50XSwiPGQ3q5d0.woff2' },
+    { name: 'Lato100', url: 'https://fonts.gstatic.com/s/lato/v24/S6u8w4BMUTPHh30AXC-qNiXg7Q.woff2' },
+    { name: 'VT323', url: 'https://fonts.gstatic.com/s/vt323/v17/pxiKyp0ihIEF2isfFJXUdVNF.woff2' },
+    { name: 'Pacifico', url: 'https://fonts.gstatic.com/s/pacifico/v22/FwZY7-Qmy14u9lezJ-6H6MmBp0u-.woff2' },
+    { name: 'Roboto', url: 'https://cdn.jsdelivr.net/fontsource/fonts/roboto-flex@latest/latin-400-normal.woff2' },
+    { name: 'Montserrat', url: 'https://cdn.jsdelivr.net/fontsource/fonts/montserrat:vf@latest/latin-wght-normal.woff2' },
+    { name: 'Open Sans', url: 'https://cdn.jsdelivr.net/fontsource/fonts/open-sans@latest/latin-400-normal.woff2' },
+    { name: 'Oswald', url: 'https://cdn.jsdelivr.net/wp/themes/airin-blog/1.5.2/fonts/oswald/oswald.woff2' },
+    { name: 'Raleway', url: 'https://cdn.jsdelivr.net/fontsource/fonts/raleway:vf@latest/latin-wght-normal.woff2' },
+    { name: 'Merriweather', url: 'https://cdn.jsdelivr.net/fontsource/fonts/merriweather:vf@latest/latin-wght-normal.woff2' },
+    { name: 'Dancing Script', url: 'https://cdn.jsdelivr.net/fontsource/fonts/dancing-script:vf@latest/latin-wght-normal.woff2' },
+    { name: 'Bebas Neue', url: 'https://cdn.jsdelivr.net/fontsource/fonts/bebas-neue@latest/latin-400-normal.woff2' }
+];
+
+let objectCounter = 0;
+
+// Highlighted elements
+let highlightedElements = {};
+
+// ========== INICIALIZACIÓN ==========
+
+document.addEventListener('DOMContentLoaded', function() {
+    initializeApplication();
+});
+
+function initializeApplication() {
+    // Inicializar elementos del DOM
+    initializeDOMElements();
+    
+    // Inicializar mini mapa
+    initMiniMap();
+    
+    // Inicializar botones de navegación
+    updateNavigationButtons();
+    
+    // Configurar eventos de tallas
+    setupSizeQuantityEvents();
+    
+    // Cargar materiales iniciales
+    loadMaterials();
+    
+    // Configurar controles de fabric.js
+    setupFabricControls();
+    
+    console.log("Aplicación inicializada correctamente");
+}
+
+function initializeDOMElements() {
+    // Inicializar elementos del DOM que se usan globalmente
+    zoomSlider = document.getElementById("zoom-slider");
+    
+    previews = {
+        front: document.getElementById('preview-front'),
+        back: document.getElementById('preview-back'),
+        leftsleeve: document.getElementById('preview-leftsleeve'),
+        rightsleeve: document.getElementById('preview-rightsleeve'),
+    };
+    
+    canvasLists = {
+        "front": document.getElementById("elements-front"),
+        "back": document.getElementById("elements-back"),
+        "leftsleeve": document.getElementById("elements-leftsleeve"),
+        "rightsleeve": document.getElementById("elements-rightsleeve")
+    };
+    
+    canvasListsTitle = {
+        "front": document.getElementById("title-front"),
+        "back": document.getElementById("title-back"),
+        "leftsleeve": document.getElementById("title-leftsleeve"),
+        "rightsleeve": document.getElementById("title-rightsleeve")
+    };
+}
+
+function initMiniMap() {
+    const miniMapElement = document.getElementById('mini-map');
+    if (miniMapElement) {
+        miniMapCanvas = new fabric.Canvas('mini-map', {
+            preserveObjectStacking: true
+        });
+        
+        // Configurar eventos del minimapa
+        setupMiniMapEvents();
+    }
+}
+
+function moveViewportFromMinimap(e) {
+    if (!canvases || !canvases[selectedTab] || !miniMapCanvas) return;
+    
+    const main = canvases[selectedTab];
+    const pointer = miniMapCanvas.getPointer(e.e);
+
+    const mainWidth = main.width;
+    const mainHeight = main.height;
+    const miniWidth = miniMapCanvas.width;
+    const miniHeight = miniMapCanvas.height;
+
+    const scaleX = miniWidth / mainWidth;
+    const scaleY = miniHeight / mainHeight;
+    const scale = Math.min(scaleX, scaleY);
+
+    const offsetX = (miniWidth - mainWidth * scale) / 2;
+    const offsetY = (miniHeight - mainHeight * scale) / 2;
+
+    const mainX = (pointer.x - offsetX) / scale;
+    const mainY = (pointer.y - offsetY) / scale;
+
+    const zoom = main.getZoom();
+
+    const vpt = main.viewportTransform;
+    vpt[4] = -mainX * zoom + main.width / 2;
+    vpt[5] = -mainY * zoom + main.height / 2;
+
+    main.setViewportTransform(vpt);
+    main.renderAll();
+
+    updateMiniMap();
+}
+
+function setupMiniMapEvents() {
+    if (!miniMapCanvas) return;
+    
+    miniMapCanvas.on("mouse:down", function (e) {
+        isDraggingMiniMap = true;
+        moveViewportFromMinimap(e); // ← ESTA FUNCIÓN DEBE ESTAR DEFINIDA
+    });
+
+    miniMapCanvas.on("mouse:move", function (e) {
+        if (isDraggingMiniMap) {
+            moveViewportFromMinimap(e); // ← ESTA FUNCIÓN DEBE ESTAR DEFINIDA
+        }
+    });
+
+    miniMapCanvas.on("mouse:up", function () {
+        isDraggingMiniMap = false;
+    });
+}
+
+function setupFabricControls() {
+    // Configurar controles de eliminación
+    fabric.Object.prototype.controls.deleteControl = new fabric.Control({
+        x: 0.5,
+        y: -0.5,
+        offsetY: -10,
+        offsetX: 10,
+        cursorStyle: 'pointer',
+        sizeX: 25,
+        sizeY: 25,
+        mouseUpHandler: function(eventData, transform) {
+            const target = transform.target;
+            const canvas = target.canvas || transform.canvas;
+            if (canvas) {
+                canvas.remove(target);
+                canvas.requestRenderAll();
+            }
+            if (target._listId) {
+                const li = document.getElementById(target._listId);
+                if (li) li.remove();
+                showNotification(`Elemento eliminado en ${selectedTab} correctamente`, "warning");
+            }
+            return true;
+        },
+        render: function(ctx, left, top, styleOverride, fabricObject) {
+            const size = 24;
+            ctx.font = `${size}px sans-serif`;
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.fillText("x", left, top);
+        }
+    });
+}
+
+// ========== FUNCIONES PRINCIPALES DE LA APLICACIÓN ==========
 
 function startDesignProcess() {
     document.getElementById("hero").classList.add("hidden");
@@ -23,67 +225,69 @@ function startDesignProcess() {
     document.getElementById('navigation-buttons').style.display = 'flex';
     document.getElementById('progress-summary').classList.add('active');
     
-    // Scroll suave a la sección de pasos
+    // Configurar eventos del slider de zoom
+    if (zoomSlider) {
+        zoomSlider.addEventListener("input", function () {
+            if (!canvases || !canvases[selectedTab]) return;
+            
+            const canvas = canvases[selectedTab];
+            const newZoom = parseFloat(this.value);
+
+            canvas.zoomToPoint(
+                { x: canvas.width / 2, y: canvas.height / 2 },
+                newZoom
+            );
+
+            canvas.requestRenderAll();
+            updateMiniMap();
+        });
+    }
+    
     document.getElementById('steps-container').scrollIntoView({ behavior: 'smooth' });
 }
+
 function updateURLStepSimple() {
-    // Crear nueva URL con el parámetro step
     const newURL = `${window.location.pathname}?step=${currentStep}`;
-    
-    // Reemplazar la URL actual (sin recargar la página)
     window.history.replaceState({}, '', newURL);
-    
-    // Mostrar notificación del paso actual
     showNotification(`Paso ${currentStep} de ${totalSteps}`, "info", 1500);
 }
-// Navegación entre pasos
+
 function nextStep() {
     if (!validateCurrentStep()) return;
   
-    // Guardar datos del paso actual
     saveCurrentStepData();
     
-    // Ocultar paso actual
     document.getElementById(`step${currentStep}-content`).classList.remove('active');
     document.getElementById(`step-${currentStep}`).classList.remove('active');
     document.getElementById(`step-${currentStep}`).classList.add('completed');
-    // Incrementar paso
+    
     currentStep++;
     
-    // Mostrar siguiente paso
     document.getElementById(`step${currentStep}-content`).classList.add('active');
     document.getElementById(`step-${currentStep}`).classList.add('active');
     
-    // Actualizar botones de navegación
     updateNavigationButtons();
     
-    // Si estamos en el paso 4, actualizar resumen
     if (currentStep === 5) {
         updateFinalSummary();
     }
     
-    // Scroll al inicio del paso
     document.getElementById(`step${currentStep}-content`).scrollIntoView({ behavior: 'smooth' });
     updateURLStepSimple();
 }
 
 function prevStep() {
-    // Ocultar paso actual
     document.getElementById(`step${currentStep}-content`).classList.remove('active');
     document.getElementById(`step-${currentStep}`).classList.remove('active');
     document.getElementById(`step-${currentStep}`).classList.remove('completed');
     
-    // Decrementar paso
     currentStep--;
     
-    // Mostrar paso anterior
     document.getElementById(`step${currentStep}-content`).classList.add('active');
     document.getElementById(`step-${currentStep}`).classList.add('active');
     
-    // Actualizar botones de navegación
     updateNavigationButtons();
     
-    // Scroll al inicio del paso
     document.getElementById(`step${currentStep}-content`).scrollIntoView({ behavior: 'smooth' });
     updateURLStepSimple();
 }
@@ -93,87 +297,78 @@ function updateNavigationButtons() {
     const btnNext = document.getElementById('btn-next');
     const btnFinish = document.getElementById('btn-finish');
     
-    // Mostrar/ocultar botón anterior
     if (currentStep === 1) {
-        btnPrev.style.display = 'none';
+        if (btnPrev) btnPrev.style.display = 'none';
     } else {
-        btnPrev.style.display = 'flex';
+        if (btnPrev) btnPrev.style.display = 'flex';
     }
     
-    // Mostrar/ocultar botones siguiente/finalizar
     if (currentStep === totalSteps) {
-        btnNext.style.display = 'none';
-        btnFinish.style.display = 'flex';
+        if (btnNext) btnNext.style.display = 'none';
+        if (btnFinish) btnFinish.style.display = 'flex';
     } else {
-        btnNext.style.display = 'flex';
-        btnFinish.style.display = 'none';
+        if (btnNext) btnNext.style.display = 'flex';
+        if (btnFinish) btnFinish.style.display = 'none';
     }
 }
 
-// Validación de pasos
 function validateCurrentStep() {
     const validationMsg = document.getElementById(`step${currentStep}-validation`);
+    if (!validationMsg) return true;
   
     switch(currentStep) {
         case 1:
-        if (!selectedMaterial) {
-            validationMsg.style.display = 'block';
-            return false;
-        }
-        break;
+            if (!selectedMaterial) {
+                validationMsg.style.display = 'block';
+                return false;
+            }
+            break;
         case 2:
-        if (!selectedColor) {
-            validationMsg.style.display = 'block';
-            return false;
-        }
-        break;
-        
+            if (!selectedColor) {
+                validationMsg.style.display = 'block';
+                return false;
+            }
+            break;
         case 3:
-        const hasSizes = Object.values(designData.sizes).some(qty => qty > 0);
-        if (!hasSizes) {
-            validationMsg.style.display = 'block';
-            return false;
-        }
-        break;
-        
+            const hasSizes = Object.values(designData.sizes).some(qty => qty > 0);
+            if (!hasSizes) {
+                validationMsg.style.display = 'block';
+                return false;
+            }
+            break;
         case 4:
-        // El paso 3 siempre es válido (pueden no agregar diseño)
-        break;
-
         case 5:
-        // El paso 3 siempre es válido (pueden no agregar diseño)
-        break;
+            // Siempre válidos
+            break;
     }
     
     validationMsg.style.display = 'none';
     return true;
 }
 
-// Guardar datos del paso actual
 function saveCurrentStepData() {
     switch(currentStep) {
         case 1:
-        designData.material = selectedMaterial;
-        updateProgressSummary();
-        break;
-
+            designData.material = selectedMaterial;
+            updateProgressSummary();
+            break;
         case 2:
-        designData.color = selectedColor;
-        updateProgressSummary();
-        break;
-        
+            designData.color = selectedColor;
+            updateProgressSummary();
+            break;
         case 3:
-        designData.sizes = getSizesData();
-        updateProgressSummary();
-        break;
-        
+            designData.sizes = getSizesData();
+            updateProgressSummary();
+            break;
         case 4:
-        saveDesignData();
-        updateProgressSummary();
-        break;
+            saveDesignData();
+            updateProgressSummary();
+            break;
     }
 }
+
 // ========== PASO 1: SELECCIÓN DE TEXTIL ==========
+
 function selectType(dataType, nombre, element) {
     // Actualizar UI
     document.querySelectorAll(".type-button").forEach(btn => {
@@ -187,46 +382,49 @@ function selectType(dataType, nombre, element) {
     }
 
     // Ocultar mensaje de validación
-    document.getElementById('step1-validation').style.display = 'none';
+    const step1Validation = document.getElementById('step1-validation');
+    if (step1Validation) step1Validation.style.display = 'none';
     
     // Cargar colores con loading
     const colorsContainer = document.querySelector("#step2-content .color-buttons");
-    showLoadingState(
-        colorsContainer,
-        "Cargando colores disponibles",
-        "Buscando combinaciones para el material seleccionado...",
-        "colors"
-    );
-    
-    fetch("get_data.php?type=colors&material=" + selectedMaterial)
-        .then(res => {
-            if (!res.ok) throw new Error(`Error ${res.status}: ${res.statusText}`);
-            return res.json();
-        })
-        .then(data => {
-            // Función para renderizar cada color
-            const renderColor = (color) => {
-                const btn = document.createElement("div");
-                btn.classList.add("color-button");
-                btn.style.background = `#${color.code_back}`;
-                btn.setAttribute("onclick", `selectColor("${color.id}", "${color.nombre}", this)`);
-                btn.id = color.nombre;
-                btn.setAttribute("title", color.nombre);
-                return btn;
-            };
-            
-            showSuccessState(
-                colorsContainer,
-                data.colors,
-                renderColor,
-                `${data.colors.length} colores disponibles`
-            );
-        })
-        .catch(error => {
-            showErrorState(colorsContainer, error, () => {
-                selectType(dataType, nombre, element);
-            }, "Error al cargar colores");
-        });
+    if (colorsContainer) {
+        showLoadingState(
+            colorsContainer,
+            "Cargando colores disponibles",
+            "Buscando combinaciones para el material seleccionado...",
+            "colors"
+        );
+        
+        fetch("get_data.php?type=colors&material=" + selectedMaterial)
+            .then(res => {
+                if (!res.ok) throw new Error(`Error ${res.status}: ${res.statusText}`);
+                return res.json();
+            })
+            .then(data => {
+                // Función para renderizar cada color
+                const renderColor = (color) => {
+                    const btn = document.createElement("div");
+                    btn.classList.add("color-button");
+                    btn.style.background = `#${color.code_back}`;
+                    btn.setAttribute("onclick", `selectColor("${color.id}", "${color.nombre}", this)`);
+                    btn.id = color.nombre;
+                    btn.setAttribute("title", color.nombre);
+                    return btn;
+                };
+                
+                showSuccessState(
+                    colorsContainer,
+                    data.colors,
+                    renderColor,
+                    `${data.colors.length} colores disponibles`
+                );
+            })
+            .catch(error => {
+                showErrorState(colorsContainer, error, () => {
+                    selectType(dataType, nombre, element);
+                }, "Error al cargar colores");
+            });
+    }
     
     selectedColor = null;
     selectedColorText = null;
@@ -235,6 +433,7 @@ function selectType(dataType, nombre, element) {
     updateProgressSummary();
     showNotification("¡Material seleccionado correctamente!", "success");
 }
+
 // ========== PASO 2: SELECCIÓN DE COLOR ==========
 function selectColor(color, nombre, element) {
     selectedColor = `${color}`;
@@ -246,65 +445,291 @@ function selectColor(color, nombre, element) {
     });
     
     if (element) {
-        // Cargar tallas con loading
-        const sizesContainer = document.querySelector("#step3-content .size-buttons");
-        showLoadingState(
-            sizesContainer,
-            "Cargando tallas disponibles",
-            "Consultando disponibilidad para el color seleccionado...",
-            "sizes"
-        );
+        // Primero cargar assets del diseño
+        loadDesignAssets();
         
-        fetch("get_data.php?type=sizes&material=" + selectedMaterial + "&color=" + selectedColor)
-            .then(res => {
-                if (!res.ok) throw new Error(`Error ${res.status}: ${res.statusText}`);
-                return res.json();
-            })
-            .then(data => {
-                // Función para renderizar cada talla
-                const renderSize = (size) => {
-                    const div = document.createElement("div");
-                    div.classList.add("size-button");
-                    div.innerHTML = `
-                        <div class="size-title">${size.nombre}</div>
-                        
-                        <span class="quantity" id="quantity-${size.nombre}" contenteditable="true">0</span>
-                        <div>
-                        <button class="qty-btn minus" data-size="${size.nombre}">–</button>
-                        <button class="qty-btn plus" data-size="${size.nombre}">+</button>
-                        </div>
-                        <div class="size">${size.x}x${size.y}cm</div>
-                    `;
-                    return div;
-                };
-                
-                showSuccessState(
-                    sizesContainer,
-                    data.sizes,
-                    renderSize,
-                    `${data.sizes.length} tallas disponibles`
-                );
-                
-                // Activar eventos después de renderizar
-                setTimeout(() => setupSizeQuantityEvents(), data.sizes.length * 30 + 100);
-            })
-            .catch(error => {
-                showErrorState(sizesContainer, error, () => {
-                    selectColor(color, nombre, element);
-                }, "Error al cargar tallas");
-            });
+        // Después cargar tallas (si es necesario)
+        const sizesContainer = document.querySelector("#step3-content .size-buttons");
+        if (sizesContainer) {
+            showLoadingState(
+                sizesContainer,
+                "Cargando tallas disponibles",
+                "Consultando disponibilidad para el color seleccionado...",
+                "sizes"
+            );
+            
+            fetch("get_data.php?type=sizes&material=" + selectedMaterial + "&color=" + selectedColor)
+                .then(res => {
+                    if (!res.ok) throw new Error(`Error ${res.status}: ${res.statusText}`);
+                    return res.json();
+                })
+                .then(data => {
+                    // Función para renderizar cada talla
+                    const renderSize = (size) => {
+                        const div = document.createElement("div");
+                        div.classList.add("size-button");
+                        div.innerHTML = `
+                            <div class="size-title">${size.nombre}</div>
+                            <span class="quantity" id="quantity-${size.nombre}" contenteditable="true">0</span>
+                            <div>
+                                <button class="qty-btn minus" data-size="${size.nombre}">–</button>
+                                <button class="qty-btn plus" data-size="${size.nombre}">+</button>
+                            </div>
+                            <div class="size">${size.x}x${size.y}cm</div>
+                        `;
+                        return div;
+                    };
+                    
+                    showSuccessState(
+                        sizesContainer,
+                        data.sizes,
+                        renderSize,
+                        `${data.sizes.length} tallas disponibles`
+                    );
+                    
+                    // Activar eventos después de renderizar
+                    setTimeout(() => setupSizeQuantityEvents(), data.sizes.length * 30 + 100);
+                })
+                .catch(error => {
+                    showErrorState(sizesContainer, error, () => {
+                        selectColor(color, nombre, element);
+                    }, "Error al cargar tallas");
+                });
+        }
         
         element.classList.add("active");
-        changeTshirtColor(color, element);
     }
 
     // Ocultar mensaje de validación
-    document.getElementById('step1-validation').style.display = 'none';
+    const step2Validation = document.getElementById('step1-validation');
+    if (step2Validation) step2Validation.style.display = 'none';
 
     // Actualizar resumen
     updateProgressSummary();
     showNotification("¡Color seleccionado correctamente!", "success");
 }
+
+function loadDesignAssets() {
+    // Mostrar loading en el contenedor de diseño
+    const designContainer = document.querySelector("#step4-content");
+    
+    // Deshabilitar navegación mientras cargamos
+    disableNavigation(true);
+    
+    fetch(`get_data.php?type=design_assets&material=${selectedMaterial}&color=${selectedColor}`)
+        .then(res => {
+            if (!res.ok) throw new Error(`Error ${res.status}: ${res.statusText}`);
+            return res.json();
+        })
+        .then(data => {
+            if (!data.success || !data.assets || data.assets.length === 0) {
+                throw new Error("No se encontraron assets de diseño");
+            }
+            
+            // Guardar assets globalmente
+            designAssets = data.assets;
+            
+            // Obtener el zoom desde la base de datos (si viene en la respuesta)
+            if (data.zoom !== undefined && data.zoom !== null) {
+                zoomFromDatabase = parseFloat(data.zoom);
+                console.log(`Zoom obtenido de BD: ${zoomFromDatabase}`);
+            } else {
+                console.log(`Usando zoom por defecto: ${zoomFromDatabase}`);
+            }
+            // Crear tabs y canvases dinámicamente
+            createDynamicTabsAndCanvases(data.assets);
+            
+            // Inicializar el primer tab
+            if (data.assets.length > 0) {
+                selectedTab = data.assets[0].side;
+                switchTab(selectedTab);
+            }
+            
+            disableNavigation(false);
+            showNotification("Área de diseño lista", "success");
+        })
+        .catch(error => {
+            console.error('Error cargando assets:', error);
+            showErrorState(
+                document.querySelector("step4-validation"),
+                error,
+                loadDesignAssets,
+                "Error al cargar el área de diseño"
+            );
+            disableNavigation(false);
+        });
+}
+function createDynamicTabsAndCanvases(assets) {
+    // Contenedores principales con IDs correctos
+    const tabsContainer = document.getElementById("tabs-container");
+    const canvasesContainer = document.getElementById("canvases-container");
+    const elementsListsContainer = document.getElementById("elements-lists");
+    const previewContainer = document.getElementById("preview-container");
+    
+    if (!tabsContainer || !canvasesContainer || !elementsListsContainer) {
+        console.error("Contenedores necesarios no encontrados");
+        console.log("tabsContainer:", tabsContainer);
+        console.log("canvasesContainer:", canvasesContainer);
+        console.log("elementsListsContainer:", elementsListsContainer);
+        return;
+    }
+    
+    // Limpiar contenedores existentes
+    tabsContainer.innerHTML = '';
+    canvasesContainer.innerHTML = '';
+    elementsListsContainer.innerHTML = '';
+    if (previewContainer) previewContainer.innerHTML = '';
+    
+    // Reiniciar variables globales
+    canvases = {};
+    sectionsState = {};
+    designData.design = {};
+    previews = {};
+    canvasLists = {};
+    canvasListsTitle = {};
+    highlightedElements = {};
+    
+    // Ordenar assets por priority
+    const sortedAssets = [...assets].sort((a, b) => a.priority - b.priority);
+    
+    sortedAssets.forEach((asset, index) => {
+        const side = asset.side;
+        
+        // Inicializar estado para esta sección
+        sectionsState[side] = { 
+            json: null, 
+            bgSrc: asset.image_url,
+            assetData: asset
+        };
+        
+        designData.design[side] = { objects: [] };
+        highlightedElements[side] = null;
+        
+        // ===== CREAR TAB =====
+        const tab = document.createElement("div");
+        tab.className = "tab";
+        tab.dataset.tab = side;
+        tab.innerHTML = `
+            <i class="material-icons">${getTabIcon(side)}</i>
+            <span>${asset.name}</span>
+        `;
+        tab.onclick = () => switchTab(side);
+        
+        if (index === 0) tab.classList.add("active");
+        tabsContainer.appendChild(tab);
+        
+        // ===== CREAR CONTENEDOR DE CANVAS =====
+        const canvasWrapper = document.createElement("div");
+        canvasWrapper.id = `${side}-canvas-container`;
+        canvasWrapper.className = "canvas-container tshit_container";
+        canvasWrapper.style.display = index === 0 ? "flex" : "none";
+        
+        canvasWrapper.innerHTML = `
+            <canvas id="${side}-canvas" width="620" height="800"></canvas>
+        `;
+        
+        canvasesContainer.appendChild(canvasWrapper);
+        
+        // ===== CREAR LISTA DE ELEMENTOS =====
+        const listContainer = document.createElement("div");
+        listContainer.id = `list-${side}`;
+        listContainer.className = "elements-list-container";
+        listContainer.style.display = index === 0 ? "block" : "none";
+        
+        listContainer.innerHTML = `
+            <div class="elements-list-header">
+                <h3 id="title-${side}">Elementos en ${asset.name}</h3>
+                <div class="list-actions">
+                    <button onclick="addText()" class="btn-text">
+                        <i class="material-icons">title</i> Texto
+                    </button>
+                    <button onclick="addImage()" class="btn-image">
+                        <i class="material-icons">image</i> Imagen
+                    </button>
+                    <button onclick="addEmoji()" class="btn-emoji">
+                        <i class="material-icons">mood</i> Emoji
+                    </button>
+                </div>
+            </div>
+            <ul id="elements-${side}" class="elements-list"></ul>
+        `;
+        
+        elementsListsContainer.appendChild(listContainer);
+        
+        // ===== CREAR CANVAS DE PREVIEW =====
+        if (previewContainer) {
+            const previewItem = document.createElement("div");
+            previewItem.innerHTML = `
+                <div>
+                    <h4>${asset.name}</h4>
+                    <canvas id="preview-${side}" width="180" height="220" class="border" onclick="switchTab('${side}')"></canvas>
+                </div>
+            `;
+            previewContainer.appendChild(previewItem);
+            
+            previews[side] = document.getElementById(`preview-${side}`);
+        }
+        
+        // Inicializar canvas
+        canvases[side] = new fabric.Canvas(`${side}-canvas`, {
+            preserveObjectStacking: true,
+            height: 800,
+            width: 620
+        });
+        canvases[side]._canvasName = side;
+        // Configurar eventos del canvas
+        setupCanvasEvents(canvases[side], side);
+        
+        // Configurar área de diseño basada en asset
+        designAreas[side] = {
+            x: parseFloat(asset.area_x) || 125,
+            y: parseFloat(asset.area_y) || 100,
+            width: parseFloat(asset.area_width) || 370,
+            height: parseFloat(asset.area_height) || 600,
+            unit: asset.area_unit || 'px'
+        };
+        
+        // Referencias a listas
+        canvasLists[side] = document.getElementById(`elements-${side}`);
+        canvasListsTitle[side] = document.getElementById(`title-${side}`);
+    });
+    
+    // Actualizar controles de zoom
+    zoomSlider = document.getElementById("zoom-slider");
+    if (zoomSlider) {
+        zoomSlider.addEventListener("input", function () {
+            if (!canvases || !canvases[selectedTab]) return;
+            
+            const canvas = canvases[selectedTab];
+            const newZoom = parseFloat(this.value);
+
+            canvas.zoomToPoint(
+                { x: canvas.width / 2, y: canvas.height / 2 },
+                newZoom
+            );
+
+            canvas.requestRenderAll();
+            updateMiniMap();
+        });
+    }
+    
+    // Configurar sincronización canvas-lista
+    setupCanvasSelectionSync();
+    
+    // Configurar eventos optimizados
+    setupOptimizedCanvasEvents();
+}
+
+function getTabIcon(side) {
+    const icons = {
+        front: "front_hand",
+        back: "back_hand",
+        leftsleeve: "pan_tool_left",
+        rightsleeve: "pan_tool_right"
+    };
+    return icons[side] || "crop";
+}
+
 function disableNavigation(disabled) {
     const prevBtn = document.querySelector(".btn-prev");
     const nextBtn = document.querySelector(".btn-next");
@@ -322,7 +747,8 @@ function disableNavigation(disabled) {
     }
 }
 
-// ========== PASO 2: SELECCIÓN DE TALLAS ==========
+// ========== PASO 3: SELECCIÓN DE TALLAS ==========
+
 function getSizesData() {
     const sizes = {};
 
@@ -340,7 +766,10 @@ function getSizesData() {
 
 function updateSizeUI(size, value) {
     const qtyEl = document.getElementById(`quantity-${size}`);
+    if (!qtyEl) return;
+    
     const button = qtyEl.closest(".size-button");
+    if (!button) return;
 
     qtyEl.textContent = value;
 
@@ -358,12 +787,9 @@ function updateSizeUI(size, value) {
     updateProgressSummary();
 }
 
-// --- Configurar todo en un solo lugar ---
 function setupSizeQuantityEvents() {
-
     // (1) INPUT MANUAL
     document.querySelectorAll(".quantity").forEach(span => {
-
         span.addEventListener("click", () => {
             if (span.textContent.trim() === "0") span.textContent = "";
         });
@@ -384,12 +810,13 @@ function setupSizeQuantityEvents() {
         });
     });
 
-
     // (2) BOTONES + y -
     document.querySelectorAll(".qty-btn").forEach(btn => {
         btn.addEventListener("click", () => {
             const size = btn.getAttribute("data-size");
             const qtyEl = document.getElementById(`quantity-${size}`);
+            if (!qtyEl) return;
+            
             let value = parseInt(qtyEl.textContent) || 0;
 
             if (btn.classList.contains("plus")) value++;
@@ -400,89 +827,98 @@ function setupSizeQuantityEvents() {
     });
 }
 
-function saveDesignData() {
-    if (!window.canvases) return;
+// ========== FUNCIONES DE DISEÑO ==========
 
-    designData.design = {
-        front: canvases.front.toJSON(),
-        back: canvases.back.toJSON(),
-        leftsleeve: canvases.leftsleeve.toJSON(),
-        rightsleeve: canvases.rightsleeve.toJSON()
-    };
+function saveDesignData() {
+    if (!canvases) return;
+
+    designData.design = {};
+    
+    Object.keys(canvases).forEach(section => {
+        designData.design[section] = canvases[section].toJSON();
+    });
 }
 
-
 // ========== RESUMEN Y PROGRESO ==========
+
 function updateProgressSummary() {
-    // Actualizar color
+    // Actualizar material
     const materialText = document.getElementById('summary-material-text');
-    materialText.textContent = selectedMaterialText;
+    if (materialText) materialText.textContent = selectedMaterialText || "No seleccionado";
 
     const colorText = document.getElementById('summary-color-text');
-    if (selectedColor) {
-        colorText.textContent = selectedColorText;
-    }
+    if (colorText) colorText.textContent = selectedColorText || "No seleccionado";
 
     // Actualizar tallas
     const sizesText = document.getElementById('summary-sizes-text');
-    const sizes = Object.entries(designData.sizes)
-    .filter(([size, qty]) => qty > 0)
-    .map(([size, qty]) => `${size}: ${qty}`)
-    .join(', ');
-
-    if (sizes) {
-        sizesText.textContent = sizes;
+    if (sizesText) {
+        const sizes = Object.entries(designData.sizes)
+            .filter(([size, qty]) => qty > 0)
+            .map(([size, qty]) => `${size}: ${qty}`)
+            .join(', ');
+        
+        sizesText.textContent = sizes || "No seleccionadas";
     }
 
     // Actualizar diseño
     const designText = document.getElementById('summary-design-text');
-    let designCount = 0;
-    if (designData.design) {
-        Object.values(designData.design).forEach(section => {
-            if (section.objects && section.objects.length > 0) {
-                designCount += section.objects.length;
-            }
-        });
-    }
-
-    if (designCount > 0) {
-        designText.textContent = `${designCount} elementos personalizados`;
+    if (designText) {
+        let designCount = 0;
+        if (designData.design) {
+            Object.values(designData.design).forEach(section => {
+                if (section.objects && section.objects.length > 0) {
+                    designCount += section.objects.length;
+                }
+            });
+        }
+        designText.textContent = designCount > 0 ? `${designCount} elementos personalizados` : "No personalizado";
     }
 }
 
 function updateFinalSummary() {
-    document.getElementById('final-Material').textContent = selectedMaterialText;
-    document.getElementById('final-color').textContent = selectedColorText;
+    const finalMaterial = document.getElementById('final-Material');
+    if (finalMaterial) finalMaterial.textContent = selectedMaterialText || "No seleccionado";
+    
+    const finalColor = document.getElementById('final-color');
+    if (finalColor) finalColor.textContent = selectedColorText || "No seleccionado";
 
     // Actualizar tallas finales
     const finalSizesList = document.getElementById('final-sizes');
-    finalSizesList.innerHTML = '';
-  
-    Object.entries(designData.sizes).forEach(([size, qty]) => {
-        if (qty > 0) {
-            const li = document.createElement('li');
-            li.textContent = `${size}: ${qty} unidad(es)`;
-            finalSizesList.appendChild(li);
-        }
-    });
-  
-    // Actualizar contador de diseño
-    let designCount = 0;
-    if (designData.design) {
-        Object.values(designData.design).forEach(section => {
-            if (section.objects && section.objects.length > 0) {
-                designCount += section.objects.length;
+    if (finalSizesList) {
+        finalSizesList.innerHTML = '';
+        
+        Object.entries(designData.sizes).forEach(([size, qty]) => {
+            if (qty > 0) {
+                const li = document.createElement('li');
+                li.textContent = `${size}: ${qty} unidad(es)`;
+                finalSizesList.appendChild(li);
             }
         });
     }
-    document.getElementById('final-design-count').textContent = designCount;
-  
+
+    // Actualizar contador de diseño
+    const finalDesignCount = document.getElementById('final-design-count');
+    if (finalDesignCount) {
+        let designCount = 0;
+        if (designData.design) {
+            Object.values(designData.design).forEach(section => {
+                if (section.objects && section.objects.length > 0) {
+                    designCount += section.objects.length;
+                }
+            });
+        }
+        finalDesignCount.textContent = designCount;
+    }
+
     // Actualizar previews
     updatePreviews();
 }
 
+// ========== NOTIFICACIONES ==========
+
 function showNotification(message, type = "info", element = null, duration = 3000) {
     const notification = document.getElementById("save-notification");
+    if (!notification) return;
 
     // Limpiar clases anteriores
     notification.className = "save-notification";
@@ -504,8 +940,9 @@ function showNotification(message, type = "info", element = null, duration = 300
         // Quitar la clase después de un tiempo
         setTimeout(() => {
             element.classList.remove(`notify-${type}`);
-        }, duration + 300); // Un poco más que la duración de la notificación
+        }, duration + 300);
     }
+    
     // Ocultar automáticamente
     setTimeout(() => {
         notification.style.opacity = "0";
@@ -516,6 +953,7 @@ function showNotification(message, type = "info", element = null, duration = 300
 }
 
 // ========== FUNCIÓN FINALIZAR ==========
+
 function finishDesign() {
     // Guardar diseño final
     saveDesignData();
@@ -528,11 +966,16 @@ function finishDesign() {
 }
 
 function exportAllDesigns() {
+    if (!canvases) {
+        console.error("No hay canvases para exportar");
+        return;
+    }
+    
     // Exportar cada vista del canvas
     const sections = ['front', 'back', 'leftsleeve', 'rightsleeve'];
   
     sections.forEach(section => {
-        if (canvases && canvases[section]) {
+        if (canvases[section]) {
             const dataURL = canvases[section].toDataURL({ format: 'png', quality: 1 });
             const link = document.createElement('a');
             link.href = dataURL;
@@ -559,133 +1002,374 @@ function exportAllDesigns() {
     document.body.removeChild(link);
 }
 
-// ========== INICIALIZACIÓN ==========
-document.addEventListener('DOMContentLoaded', function() {
-    // Configurar eventos de tallas
-    setupSizeQuantityEvents();
+// ========== FUNCIONES DE CANVAS ==========
+
+function initializeCanvases() {
+    if (canvases) {
+        console.log("Los canvases ya están inicializados");
+        return canvases;
+    }
     
-    // Inicializar botones de navegación
-    updateNavigationButtons();
-});
-// ——— Canvases (uno por sección) ———
-const canvases = {
-    front: new fabric.Canvas('front-canvas'),
-    back: new fabric.Canvas('back-canvas'),
-    leftsleeve: new fabric.Canvas('leftsleeve-canvas'),
-    rightsleeve: new fabric.Canvas('rightsleeve-canvas')
-};
-
-let selectedTab = 'front';
-let currentColor = '0001';
-
-// Estado por sección: JSON de objetos + src de fondo actual
-const sectionsState = {
-    front: { json: null, bgSrc: `img/0001${currentColor}.front.jpg` },
-    back: { json: null, bgSrc: `img/0001${currentColor}.back.jpg` },
-    leftsleeve: { json: null, bgSrc: `img/0001${currentColor}.leftsleeve.jpg` },
-    rightsleeve: { json: null, bgSrc: `img/0001${currentColor}.rightsleeve.jpg` }
-};
-  // ——— Utilidades de fondo ———
-function loadBackground(section, renderNow = true) {
-    const canvas = canvases[section];
-    const url = sectionsState[section].bgSrc;
-
-    fabric.Image.fromURL(
-        url,
-        (img) => {
-            img.selectable = false;
-            img.evented = false;
-
-            // Ajustar SOLO por altura
-            img.scaleToHeight(canvas.height);
-
-            // Aplicar zoom adicional del 1.2
-            img.scaleX *= 1.2;
-            img.scaleY *= 1.2;
-
-            // Calcular el ancho resultante con el zoom aplicado
-            const scaledWidth = img.width * img.scaleX;
-
-            // Centrar horizontalmente con el nuevo zoom
-            img.left = (canvas.width - scaledWidth) / 2;
-            img.top = (canvas.height - img.height * img.scaleY) / 2;
-
-            // Aplicar como fondo
-            canvas.setBackgroundImage(img, () => {
-                if (!canvas._designAreaRect) {
-                    drawDesignArea(section);
-                }
-                if (renderNow) canvas.renderAll();
-                updateMiniMap();
-                updatePreviews();
-            });
-        },
-        { crossOrigin: "anonymous" }
-  );
+    console.log("Inicializando canvases por primera vez");
+    canvases = {
+        front: new fabric.Canvas('front-canvas'),
+        back: new fabric.Canvas('back-canvas'),
+        leftsleeve: new fabric.Canvas('leftsleeve-canvas'),
+        rightsleeve: new fabric.Canvas('rightsleeve-canvas')
+    };
+    
+    // Configurar propiedades comunes para todos los canvases
+    Object.keys(canvases).forEach((key) => {
+        const canvas = canvases[key];
+        
+        // Configurar propiedades comunes
+        canvas.setHeight(800);
+        canvas.setWidth(620);
+        canvas.selection = true;
+        canvas.preserveObjectStacking = true;
+        
+        // Configurar eventos básicos
+        setupCanvasEvents(canvas, key);
+    });
+    
+    return canvases;
 }
-function changeTshirtColor(color, element) {
-    selectedColor = color;
-    currentColor = color;
 
-    Object.keys(canvases).forEach(section => {
-        sectionsState[section].bgSrc = `img/${selectedMaterial}${currentColor}.${section}.jpg`;
-        loadBackground(section);
+function setupCanvasEvents(canvas, canvasName) {
+    // Asignar nombre al canvas
+    canvas._canvasName = canvasName;
+    
+    // Cuando se agrega un objeto
+    canvas.on('object:added', (e) => {
+        const obj = e.target;
+        
+        // Si el objeto no tiene ID, asignarle uno
+        if (!obj.id) {
+            obj.id = generateObjectId();
+        }
+        
+        // Asignar el nombre del canvas al objeto
+        obj._canvasName = canvasName;
+        
+        console.log(`Objeto ${obj.id} agregado a ${canvasName} (tipo: ${obj.type})`);
+    });
+    
+    // Cuando se remueve un objeto
+    canvas.on('object:removed', (e) => {
+        const obj = e.target;
+        
+        // Limpiar del DOM si existe
+        if (obj._listId) {
+            const li = document.getElementById(obj._listId);
+            if (li) {
+                li.classList.add('removing');
+                setTimeout(() => li.remove(), 300);
+            }
+        }
+        
+        // Limpiar resaltado si este objeto estaba seleccionado
+        if (highlightedElements[canvasName] === obj._listId) {
+            clearHighlight(canvasName);
+        }
+    });
+    
+    // Eventos de selección
+    canvas.on('selection:created', (e) => {
+        if (canvasName !== selectedTab) return;
+        const active = e.selected[0];
+        if (active && active._listId) {
+            highlightListItem(active._listId, canvasName);
+        }
     });
 
+    canvas.on('selection:updated', (e) => {
+        if (canvasName !== selectedTab) return;
+        const active = e.selected[0];
+        if (active && active._listId) {
+            highlightListItem(active._listId, canvasName);
+        } else if (e.selected.length === 0) {
+            clearHighlight(canvasName);
+        }
+    });
+
+    canvas.on('selection:cleared', () => {
+        if (canvasName !== selectedTab) return;
+        clearHighlight(canvasName);
+    });
+    
+    // Evento de escalado para texto
+    canvas.on('object:scaling', function (e) {
+        const obj = e.target;
+        if (obj && obj.type === 'i-text') {
+            const originalFont = obj.fontSize; 
+            const newFont = originalFont * obj.scaleX; 
+
+            obj.fontSize = newFont;
+            obj.scaleX = 1;
+            obj.scaleY = 1;
+
+            canvas.requestRenderAll();
+        }
+    });
+    
+    // Actualizar minimapa cuando se modifica un objeto
+    canvas.on('object:modified', () => {
+        if (canvasName === selectedTab) {
+            updateMiniMap();
+        }
+    });
+}
+
+function drawDesignArea(section, assetData = null) {
+    if (!canvases || !canvases[section]) {
+        console.error(`Canvas ${section} no disponible para dibujar área de diseño`);
+        return;
+    }
+    
+    const canvas = canvases[section];
+    
+    // Si ya existe un rectángulo, removerlo primero
+    if (canvas._designAreaRect) canvas.remove(canvas._designAreaRect);
+    if (canvas._designAreaLabel) canvas.remove(canvas._designAreaLabel);
+    
+    // Usar datos del asset o valores por defecto
+    let area;
+    let labelText = '';
+    
+    if (assetData) {
+        area = {
+            x: parseFloat(assetData.area_x) || 125,
+            y: parseFloat(assetData.area_y) || 100,
+            width: parseFloat(assetData.area_width) || 370,
+            height: parseFloat(assetData.area_height) || 600
+        };
+        labelText = `${assetData.name} (${assetData.area_width}${assetData.area_unit || 'px'} × ${assetData.area_height}${assetData.area_unit || 'px'})`;
+    } else {
+        area = designAreas[section] || { x: 125, y: 100, width: 370, height: 600 };
+        labelText = 'Área de diseño';
+    }
+    
+    // Crear rectángulo del área de diseño
+    const rect = new fabric.Rect({
+        left: area.x,
+        top: area.y,
+        width: area.width,
+        height: area.height,
+        fill: 'rgba(0, 150, 255, 0.1)',
+        stroke: '#FF9800',
+        strokeWidth: 2,
+        strokeDashArray: [10, 5],
+        selectable: false,
+        evented: false,
+        lockMovementX: true,
+        lockMovementY: true,
+        lockRotation: true,
+        lockScalingX: true,
+        lockScalingY: true,
+        hoverCursor: 'default',
+        name: 'designArea'
+    });
+    
+    // Crear etiqueta
+    const label = new fabric.Text(labelText, {
+        left: area.x + area.width / 2,
+        top: area.y - 16,
+        originX: 'center',
+        originY: 'bottom',
+        fontSize: 14,
+        fontWeight: 'bold',
+        fill: '#FF9800',
+        backgroundColor: 'rgba(0,0,0,0.6)',
+        padding: 4,
+        selectable: false,
+        evented: false,
+        name: 'designAreaLabel'
+    });
+
+    canvas.add(rect);
+    canvas.add(label);
+    
+    // Guardar referencia al rectángulo en el canvas
+    canvas._designAreaRect = rect;
+    
+    // Enviar al frente (pero detrás de los objetos de usuario)
+    canvas.sendToBack(rect);
+    canvas.bringToFront(label);
+    
+    // Renderizar el canvas
+    canvas.renderAll();
+    
+    return rect;
+}
+function changeTshirtColor(color, element) {
+    // Inicializar canvases si no están inicializados
+    if (!canvases) {
+        // Los canvases se crearán dinámicamente en loadDesignAssets
+        return;
+    }
+    
+    selectedColor = color;
+    currentColor = color;
+    
+    // Si ya tenemos assets cargados, actualizar fondos
+    if (designAssets && designAssets.length > 0) {
+        Object.keys(canvases).forEach(side => {
+            const asset = designAssets.find(a => a.side === side);
+            if (asset && canvases[side]) {
+                sectionsState[side].bgSrc = asset.image_url;
+                loadBackground(side);
+            }
+        });
+    }
+    
     document.querySelectorAll(".color-button").forEach(btn => {
         btn.classList.remove("active");
     });
 
     if (element) element.classList.add("active");
 }
-
 function saveSection(section) {
+    if (!canvases || !canvases[section]) {
+        console.error(`Canvas ${section} no está disponible para guardar`);
+        return;
+    }
+    
     const canvas = canvases[section];
-    // Guardamos solo atributos útiles; el fondo se maneja aparte
-    sectionsState[section].json = canvas.toJSON(['selectable', 'evented', 'stroke', 'fontFamily', 'fontSize', 'fill']);
+    
+    // Guardar objetos actuales, EXCLUYENDO el fondo y el área de diseño
+    const objects = canvas.getObjects().filter(obj => {
+        // Excluir el fondo, área de diseño y sus etiquetas
+        return !(obj === canvas.backgroundImage || 
+                obj === canvas._designAreaRect || 
+                obj === canvas._designAreaLabel ||
+                (obj.name && (obj.name === 'designArea' || obj.name === 'designAreaLabel' || obj.name === 'tshirt-bg')));
+    });
+    
+    // Crear un JSON con solo los objetos de usuario
+    sectionsState[section].json = {
+        objects: objects.map(obj => obj.toObject())
+    };
+    
+    console.log(`Sección ${section} guardada con ${objects.length} objetos de usuario`);
 }
 
 function restoreSection(section) {
+    if (!canvases || !canvases[section]) {
+        console.error(`Canvas ${section} no está disponible para restaurar`);
+        return;
+    }
+    
     const canvas = canvases[section];
-    canvas.clear();
     const json = sectionsState[section].json || { objects: [] };
-    canvas.loadFromJSON(json, () => {
-        loadBackground(section);
-        const widthCm = 50;
-        const heightCm = 80;
-        drawDesignArea(section, `${widthCm} × ${heightCm} cm Max`);
-        //drawDesignArea(section);
-        canvas.renderAll();
+    
+    // Limpiar SOLO los objetos de usuario, NO el fondo
+    const userObjects = canvas.getObjects().filter(obj => {
+        return !(obj === canvas.backgroundImage || 
+                obj === canvas._designAreaRect || 
+                obj === canvas._designAreaLabel ||
+                (obj.name && (obj.name === 'designArea' || obj.name === 'designAreaLabel' || obj.name === 'tshirt-bg')));
     });
+    
+    // Remover objetos de usuario existentes
+    userObjects.forEach(obj => {
+        canvas.remove(obj);
+        
+        // También limpiar del DOM si existe
+        if (obj._listId) {
+            const li = document.getElementById(obj._listId);
+            if (li) li.remove();
+        }
+    });
+    
+    // Limpiar referencias de listas
+    if (canvasLists[section]) {
+        canvasLists[section].innerHTML = '';
+    }
+    
+    // Restaurar el fondo si no existe
+    if (!canvas.backgroundImage) {
+        loadBackground(section, false);
+    }
+    
+    // Cargar objetos desde JSON
+    if (json.objects && json.objects.length > 0) {
+        fabric.util.enlivenObjects(json.objects, (enlivenedObjects) => {
+            enlivenedObjects.forEach((obj, index) => {
+                // Restaurar propiedades importantes
+                obj.set({
+                    selectable: true,
+                    evented: true,
+                    _canvasName: section
+                });
+                
+                // Restaurar ID si existe
+                if (json.objects[index].id) {
+                    obj.id = json.objects[index].id;
+                } else {
+                    obj.id = generateObjectId();
+                }
+                
+                canvas.add(obj);
+                
+                // Recrear la entrada en la lista
+                const isText = obj.type === 'i-text' && obj.text && 
+                               (obj.text.length > 1 || !obj.text.match(/[\u{1F600}-\u{1F64F}]/u));
+                const isEmoji = obj.type === 'i-text' && obj.text && 
+                                (obj.text.length === 1 || obj.text.match(/[\u{1F600}-\u{1F64F}]/u));
+                
+                if (isText || isEmoji) {
+                    addObjectToList(obj, isText, section);
+                } else if (obj.type === 'image') {
+                    addObjectToList(obj, false, section);
+                }
+            });
+            
+            canvas.renderAll();
+            updateMiniMap();
+            updatePreviews();
+            
+            console.log(`Sección ${section} restaurada con ${enlivenedObjects.length} objetos`);
+        });
+    } else {
+        // Si no hay objetos, solo renderizar
+        canvas.renderAll();
+        updateMiniMap();
+        updatePreviews();
+    }
 }
-// ——— Inicialización de fondos ———
-['front','back','leftsleeve','rightsleeve'].forEach(sec => loadBackground(sec, false));
-const canvasLists = {
-    "front": document.getElementById("elements-front"),
-    "back": document.getElementById("elements-back"),
-    "leftsleeve": document.getElementById("elements-leftsleeve"),
-    "rightsleeve": document.getElementById("elements-rightsleeve")
-};
-const canvasListsTitle = {
-    "front": document.getElementById("title-front"),
-    "back": document.getElementById("title-back"),
-    "leftsleeve": document.getElementById("title-leftsleeve"),
-    "rightsleeve": document.getElementById("title-rightsleeve")
-};
-// ——— Cambio de pestaña ———
+
 function switchTab(tab) {
-    if (!tab || !canvases[tab]) {
-        console.error('Pestaña no válida:', tab);
+    if (!tab) {
+        console.error('Pestaña no especificada');
+        return;
+    }
+    
+    // Verificar si el tab existe
+    if (!canvases || !canvases[tab]) {
+        console.error('Canvas para pestaña no existe:', tab);
         return;
     }
 
-    // Guardar el estado de la pestaña actual
-    saveSection(selectedTab);
+    console.log(`Cambiando de ${selectedTab} a ${tab}`);
 
-    // Actualizar pestaña
+    // Guardar el estado de la pestaña actual
+    if (selectedTab && canvases[selectedTab]) {
+        console.log(`Guardando estado de ${selectedTab}`);
+        saveSection(selectedTab);
+        
+        // Limpiar selección en el canvas anterior
+        canvases[selectedTab].discardActiveObject();
+        canvases[selectedTab].renderAll();
+        
+        // Limpiar resaltado en la lista anterior
+        clearHighlight(selectedTab);
+    }
+
+    // Actualizar pestaña seleccionada
     selectedTab = tab;
 
     // Restaurar estado de la nueva pestaña
+    console.log(`Restaurando estado de ${selectedTab}`);
     restoreSection(selectedTab);
 
     // Actualizar UI de pestañas
@@ -697,56 +1381,244 @@ function switchTab(tab) {
     Object.keys(canvases).forEach(section => {
         const container = document.getElementById(`${section}-canvas-container`);
         if (container) container.style.display = (section === tab) ? 'flex' : 'none';
+        
+        const listContainer = document.getElementById(`list-${section}`);
+        if (listContainer) listContainer.style.display = (section === tab) ? 'block' : 'none';
     });
-    // Mostrar SOLO la lista de elementos del canvas actual
-    Object.keys(canvasLists).forEach(section => {
-        if (canvasLists[section]) {
-            canvasLists[section].style.display = (section === tab) ? "block" : "none";
-            canvasListsTitle[section].style.display = (section === tab) ? "block" : "none";
-        }
-    });
-    updateMiniMap();
+    
+    // Actualizar el minimapa
+    if (miniMapCanvas) {
+        updateMiniMap();
+    }
 
+    // Actualizar slider de zoom
+    if (canvases[selectedTab] && zoomSlider) {
+        zoomSlider.value = canvases[selectedTab].getZoom();
+    }
+    
+    // Si estamos en el paso 5, retroceder
     if (currentStep === 5) {
         prevStep();
     }
+    
+    console.log(`Cambio a pestaña ${tab} completado`);
+}
+function loadBackground(section, renderNow = true) {
+    if (!canvases || !canvases[section]) {
+        console.error(`Canvas ${section} no está inicializado`);
+        return;
+    }
+    
+    const canvas = canvases[section];
+    const state = sectionsState[section];
+    const url = state.bgSrc;
+    const assetData = state.assetData;
+
+    // Verificar si es SVG
+    const isSVG = url.toLowerCase().endsWith('.svg');
+    
+    if (isSVG) {
+        // Para SVG, usar fabric.loadSVGFromURL
+        loadSVGBackground(url, canvas, assetData, renderNow);
+    } else {
+        // Para imágenes raster (PNG, JPG)
+        loadRasterBackground(url, canvas, assetData, renderNow);
+    }
+}
+
+function loadSVGBackground(url, canvas, assetData, renderNow = true) {
+    const section = canvas._canvasName;
+
+    fabric.loadSVGFromURL(
+        url,
+        (objects, options) => {
+            if (!objects || !objects.length) {
+                console.error('SVG vacío o inválido');
+                loadFallbackBackground(section);
+                return;
+            }
+
+            try {
+                const svgGroup = fabric.util.groupSVGElements(objects, options);
+
+                svgGroup.set({
+                    selectable: false,
+                    evented: false,
+                    name: 'tshirt-bg'
+                });
+
+                const svgWidth  = options.width  || svgGroup.width;
+                const svgHeight = options.height || svgGroup.height;
+
+                // =============================
+                // MISMA LÓGICA QUE EL LOADER ORIGINAL
+                // =============================
+                if (assetData?.scale_x && assetData?.scale_y) {
+
+                    const scaleX  = parseFloat(assetData.scale_x);
+                    const scaleY  = parseFloat(assetData.scale_y);
+                    const offsetX = parseFloat(assetData.offset_x) || 0;
+                    const offsetY = parseFloat(assetData.offset_y) || 0;
+
+                    svgGroup.scaleX = scaleX;
+                    svgGroup.scaleY = scaleY;
+                    svgGroup.left   = offsetX;
+                    svgGroup.top    = offsetY;
+
+                } else {
+                    // Escalar por alto y centrar horizontalmente
+                    const scale = canvas.height / svgHeight;
+
+                    svgGroup.scaleX = scale;
+                    svgGroup.scaleY = scale;
+                    svgGroup.left   = (canvas.width - svgWidth * scale) / 2;
+                    svgGroup.top    = 0;
+                }
+
+                canvas.setBackgroundImage(svgGroup, () => {
+                    drawDesignArea(section, assetData);
+
+                    if (renderNow) canvas.renderAll();
+                    updateMiniMap();
+                    updatePreviews();
+
+                    // Guardar referencia si la necesitas luego
+                    canvas._svgBackground = svgGroup;
+
+                }, { crossOrigin: 'anonymous' });
+
+            } catch (error) {
+                console.error('Error procesando SVG:', error);
+                loadFallbackBackground(section);
+            }
+        },
+        null,
+        { crossOrigin: 'anonymous' }
+    );
 }
 
 
-// ——— Fuentes Google ———
-const fonts = [
-    { name: 'Tomorrow', url: 'https://fonts.gstatic.com/s/tomorrow/v17/WBLhrETNbFtZCeGqgR0dWnXBDMWDikd56VY.woff2' },
-    { name: 'Playwrite AU SA', url: 'https://fonts.gstatic.com/s/playwriteausa/v4/YcmhsZpNS1SdgmHbGgtRuUElnR3CmSC5bVQVlrclpZgRcuBjDIV1.woff2' },
-    { name: 'Lato900', url: 'https://fonts.gstatic.com/s/lato/v24/S6u9w4BMUTPHh50XSwiPGQ3q5d0.woff2' },
-    { name: 'Lato100', url: 'https://fonts.gstatic.com/s/lato/v24/S6u8w4BMUTPHh30AXC-qNiXg7Q.woff2' },
-    { name: 'VT323', url: 'https://fonts.gstatic.com/s/vt323/v17/pxiKyp0ihIEF2isfFJXUdVNF.woff2' },
-    { name: 'Pacifico', url: 'https://fonts.gstatic.com/s/pacifico/v22/FwZY7-Qmy14u9lezJ-6H6MmBp0u-.woff2' },
-    { name: 'Roboto', url: 'https://cdn.jsdelivr.net/fontsource/fonts/roboto-flex@latest/latin-400-normal.woff2' },
-    { name: 'Montserrat', url: 'https://cdn.jsdelivr.net/fontsource/fonts/montserrat:vf@latest/latin-wght-normal.woff2' },
-    { name: 'Open Sans', url: 'https://cdn.jsdelivr.net/fontsource/fonts/open-sans@latest/latin-400-normal.woff2' },
-    { name: 'Oswald', url: 'https://cdn.jsdelivr.net/wp/themes/airin-blog/1.5.2/fonts/oswald/oswald.woff2' },
-    { name: 'Raleway', url: 'https://cdn.jsdelivr.net/fontsource/fonts/raleway:vf@latest/latin-wght-normal.woff2' },
-    { name: 'Merriweather', url: 'https://cdn.jsdelivr.net/fontsource/fonts/merriweather:vf@latest/latin-wght-normal.woff2' },
-    { name: 'Dancing Script', url: 'https://cdn.jsdelivr.net/fontsource/fonts/dancing-script:vf@latest/latin-wght-normal.woff2' },
-    { name: 'Bebas Neue', url: 'https://cdn.jsdelivr.net/fontsource/fonts/bebas-neue@latest/latin-400-normal.woff2' }
-  ];
+function loadRasterBackground(url, canvas, assetData, renderNow = true) {
+    const section = canvas._canvasName;
 
-function loadFonts(list) {
-    const fontPromises = list.map(font => {
-        const ff = new FontFace(font.name, `url(${font.url})`);
-        return ff.load().then(loaded => document.fonts.add(loaded)).catch(err => console.error('Fuente falló:', font.name, err));
+    fabric.Image.fromURL(
+        url,
+        (img) => {
+            if (!img) {
+                console.error(`No se pudo cargar la imagen: ${url}`);
+                loadFallbackBackground(section);
+                return;
+            }
+
+            img.set({
+                selectable: false,
+                evented: false,
+                name: 'tshirt-bg'
+            });
+
+            // =============================
+            // MISMA LÓGICA QUE EL LOADER ORIGINAL
+            // =============================
+            if (assetData?.scale_x && assetData?.scale_y) {
+
+                const scaleX  = parseFloat(assetData.scale_x);
+                const scaleY  = parseFloat(assetData.scale_y);
+                const offsetX = parseFloat(assetData.offset_x) || 0;
+                const offsetY = parseFloat(assetData.offset_y) || 0;
+
+                img.scaleX = scaleX;
+                img.scaleY = scaleY;
+                img.left   = offsetX;
+                img.top    = offsetY;
+
+            } else {
+                // Escalar por alto y centrar horizontalmente
+                img.scaleToHeight(canvas.height);
+                img.left = (canvas.width - img.getScaledWidth()) / 2;
+                img.top  = 0;
+            }
+
+            canvas.setBackgroundImage(img, () => {
+                drawDesignArea(section, assetData);
+
+                if (renderNow) canvas.renderAll();
+                updateMiniMap();
+                updatePreviews();
+
+            }, { crossOrigin: 'anonymous' });
+        },
+        { crossOrigin: 'anonymous' }
+    );
+}
+
+function loadFallbackBackground(section) {
+    if (!canvases || !canvases[section]) return;
+    
+    const canvas = canvases[section];
+    
+    // Crear un fondo de respaldo simple
+    const fallbackColor = '#F0F0F0'; // Gris muy claro
+    const fallbackText = 'Fondo SVG no disponible';
+    
+    // Limpiar fondo anterior
+    canvas.setBackgroundColor(fallbackColor, () => {
+        // Agregar texto informativo
+        const text = new fabric.Text(fallbackText, {
+            left: canvas.width / 2,
+            top: canvas.height / 2,
+            originX: 'center',
+            originY: 'center',
+            fontSize: 18,
+            fill: '#888888',
+            fontFamily: 'Arial',
+            selectable: false,
+            evented: false
+        });
+        
+        // Agregar un rectángulo de fondo para el texto
+        const textBg = new fabric.Rect({
+            left: canvas.width / 2,
+            top: canvas.height / 2,
+            width: 250,
+            height: 60,
+            originX: 'center',
+            originY: 'center',
+            fill: 'rgba(255, 255, 255, 0.8)',
+            stroke: '#CCCCCC',
+            strokeWidth: 1,
+            rx: 5,
+            ry: 5,
+            selectable: false,
+            evented: false
+        });
+        
+        canvas.add(textBg);
+        canvas.add(text);
+        canvas.sendToBack(textBg);
+        canvas.sendToBack(text);
+        
+        // Dibujar área de diseño
+        drawDesignArea(section);
+        
+        canvas.renderAll();
+        updateMiniMap();
+        updatePreviews();
     });
-    return Promise.all(fontPromises);
 }
-loadFonts(fonts).then(() => { /*console.log("Fuentes cargadas correctamente");*/ });
-// ——— Agregar Texto ———
-let objectCounter = 0;
+// ========== FUNCIONES DE DISEÑO DE TEXTO E IMÁGENES ==========
 
 function generateObjectId() {
     objectCounter++;
     return "obj-" + objectCounter;
 }
+
 function addText() {
+    if (!canvases || !canvases[selectedTab]) {
+        console.error("Canvas no disponible para agregar texto");
+        return;
+    }
+    
+    const canvas = canvases[selectedTab];
     const text = new fabric.IText('Texto', {
         fontFamily: 'Arial',
         left: 350,
@@ -759,12 +1631,14 @@ function addText() {
         transparentCorners: false,
     });
     text.id = generateObjectId();
-    canvases[selectedTab].add(text);
-    canvases[selectedTab].setActiveObject(text);
+    canvas.add(text);
+    canvas.setActiveObject(text);
     addObjectToList(text, true, selectedTab);
 }
 
 function updateTextFont() {
+    if (!canvases || !canvases[selectedTab]) return;
+    
     const font = document.getElementById('text-font')?.value;
     const active = canvases[selectedTab].getActiveObject();
     if (active && active.type === 'i-text' && font) {
@@ -774,6 +1648,8 @@ function updateTextFont() {
 }
 
 function updateTextColor() {
+    if (!canvases || !canvases[selectedTab]) return;
+    
     const active = canvases[selectedTab].getActiveObject();
     if (active && active.type === 'i-text') {
         active.set('fill', document.getElementById('text-color').value);
@@ -782,6 +1658,8 @@ function updateTextColor() {
 }
 
 function updateTextSize() {
+    if (!canvases || !canvases[selectedTab]) return;
+    
     const active = canvases[selectedTab].getActiveObject();
     if (active && active.type === 'i-text') {
         active.set('fontSize', parseInt(document.getElementById('text-size').value, 10));
@@ -790,6 +1668,8 @@ function updateTextSize() {
 }
 
 function updateTextBorder() {
+    if (!canvases || !canvases[selectedTab]) return;
+    
     const active = canvases[selectedTab].getActiveObject();
     if (active && active.type === 'i-text') {
         active.set('stroke', document.getElementById('text-border').value);
@@ -798,6 +1678,11 @@ function updateTextBorder() {
 }
 
 function addImageToCanvas(imgElement, options = {}) {
+    if (!canvases || !canvases[selectedTab]) {
+        console.error("Canvas no disponible para agregar imagen");
+        return;
+    }
+    
     const canvas = canvases[selectedTab];
 
     const imgW = imgElement.width;
@@ -811,13 +1696,13 @@ function addImageToCanvas(imgElement, options = {}) {
         scaleX: scale,
         scaleY: scale,
         originX: 'center',
-    originY: 'center',
+        originY: 'center',
         ...options
     });
 
     // Centrar
     img.left = canvas.width / 2;
-img.top  = canvas.height / 2;
+    img.top  = canvas.height / 2;
     img.id   = generateObjectId();
 
     canvas.add(img);
@@ -845,7 +1730,7 @@ function addImageFile() {
 
             imgElement.onload = () => {
                 addImageToCanvas(imgElement);
-                uploadImageToServer(file); // se mantiene
+                uploadImageToServer(file);
                 showNotification("Imagen agregada!", "success");
             };
         };
@@ -932,6 +1817,8 @@ function closeImageModal() {
 }
 
 function updateImageBorder() {
+    if (!canvases || !canvases[selectedTab]) return;
+    
     const canvas = canvases[selectedTab];
     const active = canvas.getActiveObject();
 
@@ -948,7 +1835,6 @@ function updateImageBorder() {
 }
 
 function uploadImageToServer(file) {
-    // Esta función requiere upload_img.php en el servidor
     const formData = new FormData();
     formData.append('image', file);
     fetch('upload_img.php', { method: 'POST', body: formData })
@@ -976,76 +1862,15 @@ function uploadImage() {
     reader.readAsDataURL(file);
 }
 
-  // ——— Eventos por lienzo ———
-Object.keys(canvases).forEach((key) => {
-    const canvas = canvases[key];
-    
-    canvas.on('mouse:down', function (e) {
-        if (key !== selectedTab) return;
-        const pointer = canvas.getPointer(e.e);
-        const active = canvas.getActiveObject();
-    });
-
-    canvas.on('selection:created', () => {
-        if (key !== selectedTab) return;
-        const active = canvas.getActiveObject();
-        if (!active) return;
-        const pointer = { x: active.left || 0, y: active.top || 0 };
-    });
-
-    canvas.on('selection:updated', () => {
-        if (key !== selectedTab) return;
-        const active = canvas.getActiveObject();
-        if (!active) return;
-        const pointer = { x: active.left || 0, y: active.top || 0 };
-    });
-
-    canvas.on('selection:cleared', () => {
-        if (key !== selectedTab) return;
-        //hideContextMenu();
-    });
-    canvas.on('object:scaling', function (e) {
-        const obj = e.target;
-
-        if (obj && obj.type === 'i-text') {
-            const originalFont = obj.fontSize; 
-            const newFont = originalFont * obj.scaleX; 
-
-            // Actualizar el input ID=text-size
-            const ts = document.getElementById('text-sizeEl');
-            if (ts) ts.value = Math.round(newFont);
-
-            // Aplicar el nuevo fontSize al texto
-            obj.fontSize = newFont;
-
-            // Resetear escalado para evitar distorsión
-            obj.scaleX = 1;
-            obj.scaleY = 1;
-
-            canvas.requestRenderAll();
-        }
-    });
-    
-});
-
-// ——— Mini-mapa ———
-const miniMapCanvas = new fabric.Canvas('mini-map', {
-    preserveObjectStacking: true
-});
-let isMiniMapUpdating = false;
-let miniMapUpdateTimeout = null;
-let lastMiniMapUpdate = 0;
+// ========== MINI MAPA ==========
 
 function updateMiniMap(force = false) {
     const now = Date.now();
-    
-    // 1. Evitar múltiples llamadas simultáneas
-    if (isMiniMapUpdating && !force) {
-        return;
-    }
-    
-    // 2. Throttle: máximo 60 FPS (16ms entre actualizaciones)
-    if (now - lastMiniMapUpdate < 16 && !force) { // ~60 FPS
+
+    // Throttle + lock
+    if (isMiniMapUpdating && !force) return;
+
+    if (now - lastMiniMapUpdate < 16 && !force) {
         if (!miniMapUpdateTimeout) {
             miniMapUpdateTimeout = setTimeout(() => {
                 updateMiniMap();
@@ -1054,188 +1879,232 @@ function updateMiniMap(force = false) {
         }
         return;
     }
-    
-    // 3. Marcar como actualizando
+
     isMiniMapUpdating = true;
     lastMiniMapUpdate = now;
-    
+
     const mainCanvas = canvases[selectedTab];
-    if (!mainCanvas) {
+    if (!mainCanvas || !miniMapCanvas) {
         isMiniMapUpdating = false;
         return;
     }
 
-    // 4. Usar requestAnimationFrame para sincronizar con el navegador
     requestAnimationFrame(() => {
         try {
-            // Limpiar el minimapa completamente
             miniMapCanvas.clear();
-            
-            // Obtener dimensiones
-            const mainWidth = mainCanvas.width;
-            const mainHeight = mainCanvas.height;
-            const miniWidth = miniMapCanvas.width;
+
+            const miniWidth  = miniMapCanvas.width;
             const miniHeight = miniMapCanvas.height;
-            
-            // Obtener el fondo actual
+
             const bgImage = mainCanvas.backgroundImage;
+
+            // Helper: procesar objetos
+            const processMiniMapObjects = (bgLeft, bgTop, scale, offsetX, offsetY) => {
+                const objects = mainCanvas.getObjects();
+                const promises = [];
+
+                objects.forEach(obj => {
+                    if (
+                        obj._isDesignArea ||
+                        obj.isViewportIndicator ||
+                        obj === bgImage ||
+                        (mainCanvas._designAreaRect && obj === mainCanvas._designAreaRect)
+                    ) return;
+
+                    // CALCULAR POSICIÓN CORRECTA
+                    // 1. Obtener posición absoluta del objeto (considerando su origen/centro)
+                    let objLeft = obj.left || 0;
+                    let objTop = obj.top || 0;
+                    
+                    // 2. Si el objeto tiene originX/originY que no es 'left'/'top', ajustar
+                    const originX = obj.originX || 'left';
+                    const originY = obj.originY || 'top';
+                    
+                    // Ajustar por el origen del objeto
+                    const objWidth = (obj.width || 0) * (obj.scaleX || 1);
+                    const objHeight = (obj.height || 0) * (obj.scaleY || 1);
+                    
+                    if (originX === 'center') {
+                        objLeft -= objWidth / 2;
+                    } else if (originX === 'right') {
+                        objLeft -= objWidth;
+                    }
+                    
+                    if (originY === 'center') {
+                        objTop -= objHeight / 2;
+                    } else if (originY === 'bottom') {
+                        objTop -= objHeight;
+                    }
+                    
+                    // 3. Posición relativa al fondo
+                    const relLeft = objLeft - bgLeft;
+                    const relTop  = objTop - bgTop;
+
+                    // 4. Posición en el minimapa
+                    const miniLeft = offsetX + relLeft * scale;
+                    const miniTop  = offsetY + relTop * scale;
+
+                    if (obj.type === 'i-text') {
+                        promises.push(new Promise(resolve => {
+                            obj.clone(clone => {
+                                // Para texto, mantener el origen igual
+                                clone.set({
+                                    left: miniLeft,
+                                    top: miniTop,
+                                    scaleX: obj.scaleX * scale,
+                                    scaleY: obj.scaleY * scale,
+                                    angle: obj.angle || 0,
+                                    opacity: obj.opacity ?? 1,
+                                    selectable: false,
+                                    evented: false,
+                                    hasControls: false,
+                                    hasBorders: false,
+                                    originX: 'left',
+                                    originY: 'top' // Forzar origen top-left para consistencia
+                                });
+                                miniMapCanvas.add(clone);
+                                resolve();
+                            }, false);
+                        }));
+                    }
+
+                    if (obj.type === 'image') {
+                        promises.push(new Promise(resolve => {
+                            const src = obj._element?.src || obj.getElement?.()?.src;
+                            if (!src) return resolve();
+
+                            fabric.Image.fromURL(src, miniImg => {
+                                // IMPORTANTE: Para imágenes, forzar origen top-left
+                                // y ajustar según el escalado del objeto original
+                                const imgScaleX = (obj.scaleX || 1) * scale;
+                                const imgScaleY = (obj.scaleY || 1) * scale;
+                                
+                                miniImg.set({
+                                    left: miniLeft,
+                                    top: miniTop,
+                                    scaleX: imgScaleX,
+                                    scaleY: imgScaleY,
+                                    angle: obj.angle || 0,
+                                    opacity: obj.opacity ?? 1,
+                                    selectable: false,
+                                    evented: false,
+                                    hasControls: false,
+                                    hasBorders: false,
+                                    originX: 'left',
+                                    originY: 'top' // Forzar origen top-left
+                                });
+                                
+                                miniMapCanvas.add(miniImg);
+                                resolve();
+                            }, { 
+                                crossOrigin: 'anonymous',
+                                // Pasar las dimensiones originales si es necesario
+                                width: obj.width,
+                                height: obj.height
+                            });
+                        }));
+                    }
+                });
+
+                Promise.all(promises).then(() => {
+                    drawViewportIndicator(
+                        mainCanvas,
+                        miniMapCanvas,
+                        scale,
+                        offsetX,
+                        offsetY,
+                        bgLeft,
+                        bgTop
+                    );
+                    miniMapCanvas.renderAll();
+                    isMiniMapUpdating = false;
+                });
+            };
+
+            // =========================
+            // Sin fondo
+            // =========================
             if (!bgImage) {
-                isMiniMapUpdating = false;
+                // Sin fondo, usar todo el canvas como referencia
+                const mainWidth = mainCanvas.width;
+                const mainHeight = mainCanvas.height;
+                
+                const scaleX = miniWidth / mainWidth;
+                const scaleY = miniHeight / mainHeight;
+                const scale = Math.min(scaleX, scaleY);
+                
+                const offsetX = (miniWidth - mainWidth * scale) / 2;
+                const offsetY = (miniHeight - mainHeight * scale) / 2;
+                
+                processMiniMapObjects(0, 0, scale, offsetX, offsetY);
                 return;
             }
 
-            // Calcular escala para el fondo
-            const bgElement = bgImage._element || bgImage.getElement();
-            if (!bgElement) {
-                isMiniMapUpdating = false;
-                return;
-            }
-            
-            const bgOriginalWidth = bgElement.width || 1;
-            const bgOriginalHeight = bgElement.height || 1;
-            const bgScaleX = bgImage.scaleX || 1;
-            const bgScaleY = bgImage.scaleY || 1;
+            // =========================
+            // TAMAÑO REAL DEL FONDO
+            // =========================
             const bgLeft = bgImage.left || 0;
             const bgTop = bgImage.top || 0;
-            
-            const bgDisplayWidth = bgOriginalWidth * bgScaleX;
-            const bgDisplayHeight = bgOriginalHeight * bgScaleY;
-            
-            const scaleX = miniWidth / bgDisplayWidth;
-            const scaleY = miniHeight / bgDisplayHeight;
-            const scale = Math.min(scaleX, scaleY);
-            
-            const offsetX = (miniWidth - bgDisplayWidth * scale) / 2;
-            const offsetY = (miniHeight - bgDisplayHeight * scale) / 2;
 
-            // 5. Agregar fondo al minimapa
-            fabric.Image.fromURL(bgElement.src, (miniBg) => {
+            // Ajustar por el origen del fondo
+            const bgOriginX = bgImage.originX || 'left';
+            const bgOriginY = bgImage.originY || 'top';
+            const bgWidth = bgImage.width * (bgImage.scaleX || 1);
+            const bgHeight = bgImage.height * (bgImage.scaleY || 1);
+            
+            let adjustedBgLeft = bgLeft;
+            let adjustedBgTop = bgTop;
+            
+            if (bgOriginX === 'center') {
+                adjustedBgLeft -= bgWidth / 2;
+            } else if (bgOriginX === 'right') {
+                adjustedBgLeft -= bgWidth;
+            }
+            
+            if (bgOriginY === 'center') {
+                adjustedBgTop -= bgHeight / 2;
+            } else if (bgOriginY === 'bottom') {
+                adjustedBgTop -= bgHeight;
+            }
+
+            const scaleX = miniWidth / bgWidth;
+            const scaleY = miniHeight / bgHeight;
+            const scale = Math.min(scaleX, scaleY);
+
+            const offsetX = (miniWidth - bgWidth * scale) / 2;
+            const offsetY = (miniHeight - bgHeight * scale) / 2;
+
+            // =========================
+            // Clonar fondo
+            // =========================
+            bgImage.clone(miniBg => {
                 miniBg.set({
                     left: offsetX,
                     top: offsetY,
-                    scaleX: bgScaleX * scale,
-                    scaleY: bgScaleY * scale,
+                    scaleX: bgImage.scaleX * scale,
+                    scaleY: bgImage.scaleY * scale,
                     selectable: false,
                     evented: false,
                     hasControls: false,
                     hasBorders: false,
-                    opacity: 0.8 // Hacer el fondo un poco transparente
+                    opacity: 0.85,
+                    originX: 'left',
+                    originY: 'top'
                 });
-                
+
                 miniMapCanvas.setBackgroundImage(miniBg, () => {
-                    // 6. Procesar objetos del canvas principal
-                    const objects = mainCanvas.getObjects();
-                    const objectPromises = [];
-                    
-                    objects.forEach((obj) => {
-                        // Saltar objetos especiales (indicador de área, etc.)
-                        if (obj._isDesignArea || obj.isViewportIndicator || 
-                            obj === bgImage || obj === mainCanvas._designAreaRect) {
-                            return;
-                        }
-                        
-                        // Calcular posición RELATIVA AL FONDO
-                        const objLeftRelativeToBg = (obj.left || 0) - bgLeft;
-                        const objTopRelativeToBg = (obj.top || 0) - bgTop;
-                        
-                        const miniLeft = offsetX + objLeftRelativeToBg * scale;
-                        const miniTop = offsetY + objTopRelativeToBg * scale;
-                        
-                        // Manejar diferentes tipos de objetos
-                        if ( obj.type === 'i-text') {
-                            const clonePromise = new Promise((resolve) => {
-                                obj.clone((clone) => {
+                    processMiniMapObjects(
+                        adjustedBgLeft, // Usar posición ajustada
+                        adjustedBgTop,
+                        scale,
+                        offsetX,
+                        offsetY
+                    );
+                });
+            });
 
-                                    clone.set({
-                                        left: miniLeft,
-                                        top: miniTop,
-
-                                        // ⚠️ SOLO ESCALA – NO TOCAR fontSize
-                                        scaleX: obj.scaleX * scale,
-                                        scaleY: obj.scaleY * scale,
-
-                                        angle: obj.angle || 0,
-                                        opacity: obj.opacity ?? 1,
-
-                                        selectable: false,
-                                        evented: false,
-                                        hasControls: false,
-                                        hasBorders: false
-                                    });
-
-                                    clone.setCoords();
-                                    miniMapCanvas.add(clone);
-                                    resolve();
-                                }, false); // 🔥 FUNDAMENTAL
-                            });
-
-                            objectPromises.push(clonePromise);
-                            return;
-                        } else if (obj.type === 'image') {
-                            // PARA IMÁGENES: Cargar desde la fuente original
-                            const imgPromise = new Promise((resolve) => {
-                                try {
-                                    // Obtener la fuente de la imagen
-                                    const imgSrc = obj._element ? obj._element.src : 
-                                                  (obj.getElement ? obj.getElement().src : null);
-                                    
-                                    if (!imgSrc) {
-                                        console.warn('No se encontró fuente para imagen en minimapa');
-                                        resolve();
-                                        return;
-                                    }
-                                    
-                                    // Cargar la imagen directamente
-                                    fabric.Image.fromURL(imgSrc, (miniImg) => {
-                                        miniImg.set({
-                                            left: miniLeft,
-                                            top: miniTop,
-                                            scaleX: (obj.scaleX || 1) * scale,
-                                            scaleY: (obj.scaleY || 1) * scale,
-                                            angle: obj.angle || 0,
-                                            opacity: obj.opacity || 1,
-                                            selectable: false,
-                                            evented: false,
-                                            hasControls: false,
-                                            hasBorders: false,
-                                            originX: 'center',
-                                            originY: 'center'
-                                        });
-                                        
-                                        miniMapCanvas.add(miniImg);
-                                        resolve();
-                                    }, {
-                                        crossOrigin: 'anonymous',
-                                        // Forzar recarga si hay problemas de caché
-                                        cacheBust: true
-                                    });
-                                } catch (error) {
-                                    console.error('Error cargando imagen para minimapa:', error);
-                                    resolve();
-                                }
-                            });
-                            objectPromises.push(imgPromise);
-                        }
-                    });
-                    
-                    // 7. Esperar a que todas las imágenes se carguen
-                    Promise.all(objectPromises).then(() => {
-                        // 8. Dibujar indicador del viewport
-                        drawViewportIndicator(mainCanvas, miniMapCanvas, scale, offsetX, offsetY, bgLeft, bgTop);
-                        
-                        // 9. Renderizar una sola vez
-                        miniMapCanvas.renderAll();
-                        
-                        isMiniMapUpdating = false;
-                    }).catch(error => {
-                        console.error('Error cargando objetos para minimapa:', error);
-                        isMiniMapUpdating = false;
-                    });
-                }, { crossOrigin: 'anonymous' });
-            }, { crossOrigin: 'anonymous' });
-            
-        } catch (error) {
-            console.error('Error en updateMiniMap:', error);
+        } catch (err) {
+            console.error('Error updateMiniMap:', err);
             isMiniMapUpdating = false;
         }
     });
@@ -1246,7 +2115,6 @@ function drawViewportIndicator(mainCanvas, miniCanvas, scale, offsetX, offsetY, 
         const zoom = mainCanvas.getZoom();
         const vpt = mainCanvas.viewportTransform;
         
-        // SIEMPRE mostrar el indicador, incluso con zoom = 1
         if (!vpt) return;
         
         // Calcular el área visible RELATIVA AL FONDO
@@ -1257,9 +2125,8 @@ function drawViewportIndicator(mainCanvas, miniCanvas, scale, offsetX, offsetY, 
         
         // Eliminar indicador anterior
         miniCanvas.getObjects()
-    .filter(o => o.isViewportIndicator)
-    .forEach(o => miniCanvas.remove(o));
-
+            .filter(o => o.isViewportIndicator)
+            .forEach(o => miniCanvas.remove(o));
         
         // Calcular posición y tamaño del indicador
         const indicatorLeft = offsetX + visibleLeft * scale;
@@ -1275,7 +2142,7 @@ function drawViewportIndicator(mainCanvas, miniCanvas, scale, offsetX, offsetY, 
             return;
         }
         
-        // Crear nuevo indicador con estilo mejorado
+        // Crear nuevo indicador
         const indicator = new fabric.Rect({
             left: indicatorLeft,
             top: indicatorTop,
@@ -1290,11 +2157,10 @@ function drawViewportIndicator(mainCanvas, miniCanvas, scale, offsetX, offsetY, 
             hasControls: false,
             hasBorders: false,
             isViewportIndicator: true,
-            // Información del zoom para referencia
             zoomLevel: zoom
         });
         
-        // Agregar texto con el nivel de zoom (opcional)
+        // Agregar texto con el nivel de zoom
         if (zoom !== 1) {
             const zoomText = new fabric.Text(`${zoom.toFixed(1)}x`, {
                 left: indicatorLeft + 5,
@@ -1312,7 +2178,6 @@ function drawViewportIndicator(mainCanvas, miniCanvas, scale, offsetX, offsetY, 
         }
         
         miniCanvas.add(indicator);
-        
         miniCanvas.bringToFront(indicator);
         
         // Actualizar slider de zoom
@@ -1322,20 +2187,23 @@ function drawViewportIndicator(mainCanvas, miniCanvas, scale, offsetX, offsetY, 
         console.error('Error dibujando indicador:', error);
     }
 }
+
 function updateZoomSliderValue(zoom) {
-    const zoomSlider = document.getElementById("zoom-slider");
-    if (zoomSlider) {
-        zoomSlider.value = zoom;
-        
-        // Actualizar visualmente si hay un display del valor
-        const zoomValueDisplay = document.getElementById("zoom-value-display");
-        if (zoomValueDisplay) {
-            zoomValueDisplay.textContent = `${zoom.toFixed(1)}x`;
-        }
+    if (!zoomSlider) return;
+    
+    zoomSlider.value = zoom;
+    
+    const zoomValueDisplay = document.getElementById("zoom-value-display");
+    if (zoomValueDisplay) {
+        zoomValueDisplay.textContent = `${zoom.toFixed(1)}x`;
     }
 }
-// Configura eventos optimizados para los canvases
 function setupOptimizedCanvasEvents() {
+    if (!canvases) {
+        console.error("No se pueden configurar eventos: los canvases no están inicializados");
+        return;
+    }
+    
     Object.keys(canvases).forEach((key) => {
         const canvas = canvases[key];
         
@@ -1365,7 +2233,7 @@ function setupOptimizedCanvasEvents() {
                     setTimeout(() => {
                         scheduleMiniMapUpdate();
                         pendingMiniMapUpdate = false;
-                    }, 50); // 50ms de delay
+                    }, 50);
                 }
             });
         });
@@ -1373,7 +2241,7 @@ function setupOptimizedCanvasEvents() {
         // Eventos que actualizan inmediatamente
         canvas.on('object:added', () => {
             if (key === selectedTab) {
-                setTimeout(() => updateMiniMap(), 100); // Pequeño delay
+                setTimeout(() => updateMiniMap(), 100);
             }
         });
         
@@ -1388,7 +2256,7 @@ function setupOptimizedCanvasEvents() {
         canvas.on('after:render', () => {
             if (key === selectedTab) {
                 const now = Date.now();
-                if (now - lastRenderTime > 200) { // Máximo 5 FPS para after:render
+                if (now - lastRenderTime > 200) {
                     scheduleMiniMapUpdate();
                     lastRenderTime = now;
                 }
@@ -1418,86 +2286,18 @@ function setupOptimizedCanvasEvents() {
     });
 }
 
-// En lugar de tu código actual de event listeners, llama:
-setupOptimizedCanvasEvents();
-let isDraggingMiniMap = false;
-// Actualizar el evento de click en el minimapa para navegación
-miniMapCanvas.on("mouse:down", function (e) {
-    isDraggingMiniMap = true;
-    moveViewportFromMinimap(e); // ya centra el viewport
-});
-
-miniMapCanvas.on("mouse:move", function (e) {
-    if (isDraggingMiniMap) {
-        moveViewportFromMinimap(e);
-    }
-});
-
-miniMapCanvas.on("mouse:up", function () {
-    isDraggingMiniMap = false;
-});
-
-function moveViewportFromMinimap(e) {
-    const main = canvases[selectedTab];
-    const pointer = miniMapCanvas.getPointer(e.e);
-
-    const mainWidth = main.width;
-    const mainHeight = main.height;
-    const miniWidth = miniMapCanvas.width;
-    const miniHeight = miniMapCanvas.height;
-
-    // escalar como ya hacías
-    const scaleX = miniWidth / mainWidth;
-    const scaleY = miniHeight / mainHeight;
-    const scale = Math.min(scaleX, scaleY);
-
-    const offsetX = (miniWidth - mainWidth * scale) / 2;
-    const offsetY = (miniHeight - mainHeight * scale) / 2;
-
-    const mainX = (pointer.x - offsetX) / scale;
-    const mainY = (pointer.y - offsetY) / scale;
-
-    const zoom = main.getZoom();
-
-    const vpt = main.viewportTransform;
-    vpt[4] = -mainX * zoom + main.width / 2;
-    vpt[5] = -mainY * zoom + main.height / 2;
-
-    main.setViewportTransform(vpt);
-    main.renderAll();
-
-    updateMiniMap(); // redibujar el rectángulo del viewport
-}
-
-// Llamar a updateMiniMap cuando se modifique el canvas
-Object.keys(canvases).forEach((key) => {
-    const c = canvases[key];
-    c.on('object:modified', updateMiniMap);
-    c.on('object:added', updateMiniMap);
-    c.on('object:removed', updateMiniMap);
-    c.on('after:render', updateMiniMap);
-    c.on('object:moving', updateMiniMap);
-    c.on('object:scaling', updateMiniMap);
-    c.on('object:rotating', updateMiniMap);
-});
-
-// Asegurarse de que el minimapa se actualice al cambiar de pestaña
-const originalSwitchTab = switchTab;
-switchTab = function(tab) {
-    originalSwitchTab(tab);
-    setTimeout(updateMiniMap, 100); // Pequeño delay para asegurar que todo se cargó
-};
-
-
-const zoomSlider = document.getElementById("zoom-slider");
-const MIN_ZOOM = 0.2;
-const MAX_ZOOM = 4;
+// ========== ZOOM FUNCTIONS ==========
 
 function syncZoomSlider() {
+    if (!canvases || !canvases[selectedTab] || !zoomSlider) return;
+    
     const canvas = canvases[selectedTab];
     zoomSlider.value = canvas.getZoom();
 }
+
 function zoomIn() {
+    if (!canvases || !canvases[selectedTab]) return;
+    
     const canvas = canvases[selectedTab];
     let zoom = canvas.getZoom() * 1.2;
     if (zoom > MAX_ZOOM) zoom = MAX_ZOOM;
@@ -1506,142 +2306,39 @@ function zoomIn() {
 }
 
 function zoomOut() {
+    if (!canvases || !canvases[selectedTab]) return;
+    
     const canvas = canvases[selectedTab];
     let zoom = canvas.getZoom() / 1.2;
     if (zoom < MIN_ZOOM) zoom = MIN_ZOOM;
     canvas.zoomToPoint({ x: canvas.width / 2, y: canvas.height / 2 }, zoom);
     syncZoomSlider();
 }
-zoomSlider.addEventListener("input", function () {
-    const canvas = canvases[selectedTab];
-    const newZoom = parseFloat(this.value);
 
-    canvas.zoomToPoint(
-        { x: canvas.width / 2, y: canvas.height / 2 },
-        newZoom
-    );
-
-    canvas.requestRenderAll();
-    updateMiniMap();
-});
 function resetZoom() {
+    if (!canvases || !canvases[selectedTab]) return;
+    
     const canvas = canvases[selectedTab];
     canvas.setViewportTransform([1, 0, 0, 1, 0, 0]);
-    canvas.setZoom(1);
     syncZoomSlider();
+    canvas.requestRenderAll();
+    updateMiniMap();
+    showNotification(`Zoom restablecido`, "info");
 }
 
-function addSize(size) { console.log(`Se seleccionó la talla ${size}`); }
-
-// ——— Scroll ———
-function scrollToFeatures() { document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' }); }
-
-// ——— Exportar PNG ———
-function exportDesign() {
-    const dataURL = canvases[selectedTab].toDataURL({ format: 'png', quality: 1 });
-    const link = document.createElement('a');
-    link.href = dataURL;
-    link.download = `${selectedTab}-camiseta.png`;
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-}
-
-fabric.Object.prototype.controls.deleteControl = new fabric.Control({
-    x: 0.5, // derecha
-    y: -0.5, // arriba
-    offsetY: -10,
-    offsetX: 10,
-    cursorStyle: 'pointer',
-    sizeX: 25,   // ancho
-    sizeY: 25,   // alto
-    mouseUpHandler: function(eventData, transform) {
-        const target = transform.target;
-        const canvas = target.canvas || transform.canvas; // asegurar acceso al canvas
-        if (canvas) {
-            canvas.remove(target);
-            canvas.requestRenderAll();
-        }
-        if (target._listId) {
-            const li = document.getElementById(target._listId);
-            if (li) li.remove();
-            showNotification(`Elemento eliminado en ${selectedTab} correctamente`, "warning");
-        }
-        return true;
-    },
-    render: function(ctx, left, top, styleOverride, fabricObject) {
-        const size = 24; // tamaño del emoji
-        ctx.font = `${size}px sans-serif`;
-        ctx.textAlign = "center";
-        ctx.textBaseline = "middle";
-        ctx.fillText("x", left, top);  // <<<<<< AQUI VA TU EMOJI
-    }
-});
-
-canvases[selectedTab].on('object:added', (e) => {
-    const obj = e.target;
-    
-    // Ocultar controles específicos
-    obj.setControlsVisibility({
-        mt: false,  // top middle
-        mb: false,  // bottom middle
-        ml: false,  // left middle
-        mr: false,  // right middle
-        bl: false,  // bottom left
-        br: false,  // bottom right
-        tl: false,  // top left
-        tr: false,  // top right
-        mtr: true,  // rotate control
-    });
-    
-    // Opcional: Cambiar color de los controles visibles
-    obj.set({
-        cornerColor: '#2196F3',
-        cornerStrokeColor: '#ffffff',
-        cornerStyle: 'circle',
-        cornerSize: 10,
-        transparentCorners: false,
-        borderColor: '#2196F3',
-        borderScaleFactor: 2,
-        borderOpacityWhenMoving: 0.8,
-        borderDashArray: [5, 5], // línea punteada
-    });
-});
-
-// ——— Exponer funciones globales si se usa inline en HTML ———
-Object.assign(window, {
-    switchTab,
-    changeTshirtColor,
-    addText,
-    updateTextFont,
-    updateTextColor,
-    updateTextSize,
-    updateTextBorder,
-    addImage,
-    uploadImage,
-    updateImageBorder,
-    scrollToFeatures,
-    zoomIn,
-    zoomOut,
-    resetZoom,
-    exportDesign
-});
-
-// Canvases de preview (minimap)
-const previews = {
-    front: document.getElementById('preview-front'),
-    back: document.getElementById('preview-back'),
-    leftsleeve: document.getElementById('preview-leftsleeve'),
-    rightsleeve: document.getElementById('preview-rightsleeve'),
-};
+// ========== PREVIEW FUNCTIONS ==========
 
 function updatePreviews() {
+    if (!canvases || !previews) return;
+    
     Object.keys(canvases).forEach((key) => {
         const mainCanvas = canvases[key];
         const previewCanvas = previews[key];
-        const ctx = previewCanvas.getContext("2d");
-
+        
         if (!mainCanvas || !previewCanvas) return;
+
+        const ctx = previewCanvas.getContext("2d");
+        if (!ctx) return;
 
         // fuerza render en el canvas principal
         mainCanvas.renderAll();
@@ -1661,238 +2358,24 @@ function updatePreviews() {
     });
 }
 
-// Actualizar previews cada vez que cambie algo en los canvases
-Object.values(canvases).forEach((canvas) => {
-    canvas.on('object:modified', updatePreviews);
-    canvas.on('object:added', updatePreviews);
-    canvas.on('object:removed', updatePreviews);
-});
-
-Object.values(canvases).forEach((canvas) => {
-    const canvasEl = canvas.upperCanvasEl;
-    let touchOnObject = false;
-    let lastDistance = 0;
-    let isPinching = false;
-    let isPanning = false;
-
-    let lastX = 0;
-    let lastY = 0;
-
-    canvasEl.addEventListener('touchstart', function(e) {
-    if (e.touches.length === 2) {
-        isPinching = true;
-        isPanning = false;
-        touchOnObject = false;
-        lastDistance = 0;
-        document.body.style.overflow = 'hidden';
-    } 
-    else if (e.touches.length === 1) {
-        const target = canvas.findTarget(e);
-
-        touchOnObject = !!target;
-
-        isPinching = false;
-        isPanning = !touchOnObject; // 👈 SOLO pan si NO hay objeto
-
-        lastX = e.touches[0].clientX;
-        lastY = e.touches[0].clientY;
-
-        document.body.style.overflow = 'hidden';
-    }
-}, { passive: false });
-
-
-    canvasEl.addEventListener('touchmove', function(e) {
-        // ZOOM con 2 dedos
-        if (e.touches.length === 2 && isPinching) {
-            e.preventDefault();
-
-            const dx = e.touches[0].clientX - e.touches[1].clientX;
-            const dy = e.touches[0].clientY - e.touches[1].clientY;
-            const distance = Math.sqrt(dx * dx + dy * dy);
-
-            if (lastDistance) {
-                const zoomFactor = distance / lastDistance;
-                const rect = canvasEl.getBoundingClientRect();
-
-                const centerX = (e.touches[0].clientX + e.touches[1].clientX) / 2 - rect.left;
-                const centerY = (e.touches[0].clientY + e.touches[1].clientY) / 2 - rect.top;
-
-                canvas.zoomToPoint(
-                    { x: centerX, y: centerY },
-                    canvas.getZoom() * zoomFactor
-                );
-            }
-
-            lastDistance = distance;
-            canvas.requestRenderAll();
-        }
-
-        // PAN con 1 dedo  ✅
-        else if (e.touches.length === 1 && isPanning) {
-            e.preventDefault();
-
-            const dx = e.touches[0].clientX - lastX;
-            const dy = e.touches[0].clientY - lastY;
-
-            const vpt = canvas.viewportTransform;
-            vpt[4] += dx;
-            vpt[5] += dy;
-
-            lastX = e.touches[0].clientX;
-            lastY = e.touches[0].clientY;
-
-            canvas.requestRenderAll();
-        }
-    }, { passive: false });
-
-    canvasEl.addEventListener('touchend', function() {
-        isPinching = false;
-        isPanning = false;
-        lastDistance = 0;
-        document.body.style.overflow = 'auto';
-    });
-});
-
-// Función para bloquear interacción con el fondo
-function lockBackgroundInteraction() {
-    Object.values(canvases).forEach((canvas) => {
-        // Configurar fondo como no interactivo
-        if (canvas.backgroundImage) {
-            canvas.backgroundImage.set({
-                selectable: false,
-                evented: false,
-                hasControls: false,
-                hasBorders: false,
-                lockMovementX: true,
-                lockMovementY: true,
-                lockRotation: true,
-                lockScalingX: true,
-                lockScalingY: true,
-                lockUniScaling: true,
-                lockSkewingX: true,
-                lockSkewingY: true
-            });
-        }
-        
-        // Evento al cargar nuevo fondo
-        canvas.on('background:loaded', function() {
-            if (canvas.backgroundImage) {
-                canvas.backgroundImage.set({
-                    selectable: false,
-                    evented: false,
-                    hasControls: false,
-                    hasBorders: false,
-                    lockMovementX: true,
-                    lockMovementY: true,
-                    lockRotation: true,
-                    lockScalingX: true,
-                    lockScalingY: true,
-                    lockUniScaling: true,
-                    lockSkewingX: true,
-                    lockSkewingY: true
-                });
-                canvas.renderAll();
-            }
-        });
-    });
-}
-
-const designAreas = {
-    front: { x: 125, y: 100, width: 370, height: 600 },
-    back: { x: 125, y: 55, width: 370, height: 650 },
-    leftsleeve: { x: 290, y: 120, width: 170, height: 200 },
-    rightsleeve: { x: 160, y: 120, width: 170, height: 200 }
-};
-function drawDesignArea(section, labelText = '') {
-    const canvas = canvases[section];
-    
-    // Si ya existe un rectángulo, removerlo primero
-    if (canvas._designAreaRect) canvas.remove(canvas._designAreaRect);
-    if (canvas._designAreaLabel) canvas.remove(canvas._designAreaLabel);
-    
-    const area = designAreas[section];
-
-    const rect = new fabric.Rect({
-        left: area.x,
-        top: area.y,
-        width: area.width,
-        height: area.height,
-        fill: 'rgba(0, 150, 255, 0.1)',  // Azul semitransparente para mejor visibilidad
-        stroke: '#FF9800',                // Naranja para mayor contraste
-        strokeWidth: 2,
-        strokeDashArray: [10, 5],
-        selectable: false,
-        evented: false,
-        lockMovementX: true,
-        lockMovementY: true,
-        lockRotation: true,
-        lockScalingX: true,
-        lockScalingY: true,
-        hoverCursor: 'default',
-        name: 'designArea'
-    });
-    const label = new fabric.Text(labelText, {
-        left: area.x + area.width / 2,
-        top: area.y - 16, // ⬅️ arriba del rectángulo
-        originX: 'center',
-        originY: 'bottom',
-        fontSize: 14,
-        fontWeight: 'bold',
-        fill: '#FF9800',
-        backgroundColor: 'rgba(0,0,0,0.6)',
-        padding: 4,
-        selectable: false,
-        evented: false,
-        name: 'designAreaLabel'
-    });
-
-    canvas.add(rect);
-    canvas.add(label);
-    
-    // Guardar referencia al rectángulo en el canvas
-    canvas._designAreaRect = rect;
-    
-    // Enviar al frente (pero detrás de los objetos de usuario)
-    canvas.sendToBack(rect);
-    canvas.bringToFront(label);
-    
-    canvas.renderAll();
-    return rect;
-}
-// Reemplaza tu inicialización actual con esta versión optimizada
-function initializeCanvasSystem() {
-    // Inicializar canvases
-    ['front','back','leftsleeve','rightsleeve'].forEach(sec => {
-        loadBackground(sec, false);
-    });
-    
-    // Configurar eventos optimizados
-    setupOptimizedCanvasEvents();
-    
-    // Configurar sincronización canvas-lista
-    setupCanvasSelectionSync();
-    
-    // Inicializar minimapa
-    setTimeout(() => {
-        updateMiniMap(true);
-    }, 500);
-    
-    // Inicializar slider de zoom
-    syncZoomSlider();
-}
-
-// Llama a esta función en lugar de tu código actual
-initializeCanvasSystem();
+// ========== LIST MANAGEMENT ==========
 
 function addObjectToList(obj, istext, canvasName) {
-    const list = canvasLists[canvasName]; // ⬅️ lista correcta
-    if (!list) return;
+    if (!canvasLists || !canvasLists[canvasName]) return;
 
+    // Verificar si ya existe en la lista
+    const existingLi = document.getElementById("item-" + obj.id);
+    if (existingLi) {
+        console.warn(`El objeto ${obj.id} ya existe en la lista de ${canvasName}`);
+        highlightListItem("item-" + obj.id, canvasName, true);
+        return;
+    }
+
+    const list = canvasLists[canvasName];
     obj._canvasName = canvasName;
 
     const li = document.createElement("li");
-    obj._listId = "item-" + obj.id; // evita undefined y duplicados
+    obj._listId = "item-" + obj.id;
     li.id = obj._listId;
 
     li.innerHTML = `<div class="tools"></div>`;
@@ -1908,8 +2391,10 @@ function addObjectToList(obj, istext, canvasName) {
         
         // Seleccionar el objeto en el canvas
         const canvas = canvases[canvasName];
-        canvas.setActiveObject(obj);
-        canvas.renderAll();
+        if (canvas) {
+            canvas.setActiveObject(obj);
+            canvas.renderAll();
+        }
         
         // Resaltar este li
         highlightListItem(obj._listId, canvasName);
@@ -1918,10 +2403,11 @@ function addObjectToList(obj, istext, canvasName) {
     });
 
     // === SOLO PARA TEXTOS ===
-    if (obj.type === "i-text" && istext===true) {
+    if (obj.type === "i-text" && istext === true) {
         const currentTextAlign = obj.textAlign || 'left';
         const currentFontWeight = obj.fontWeight || 'normal';
         const currentFontStyle = obj.fontStyle || 'normal';
+        
         toolsContainer.innerHTML = `
             <div class="tool-group">
                 <div class="tool-label"><i class="material-icons">text_snippet</i> Texto - ${objectCounter}</div>
@@ -1956,24 +2442,21 @@ function addObjectToList(obj, istext, canvasName) {
                 <div class="tool-label"><i class="material-icons">font_download</i> Fuente</div>
                 <select class="text-font">
                     ${(() => {
-            // 1. Define tu lista de fuentes
-            const fontList = [
-                'Arial', 'VT323', 'Pacifico', 'Lato', 
-                'Playwrite AU SA', 'Tomorrow', 'Roboto', 
-                'Montserrat', 'Open Sans', 'Oswald', 
-                'Raleway', 'Merriweather', 'Dancing Script', 
-                'Bebas Neue'
-            ];
-            let optionsHTML = '';
-            
-            // 2. Genera una opción <option> con estilo para cada fuente
-            fontList.forEach(font => {
-                const isSelected = obj.fontFamily === font ? 'selected' : '';
-                // Aplica el estilo 'font-family' directamente a la opción
-                optionsHTML += `<option value="${font}" ${isSelected} style="font-family: '${font}';">${font}</option>`;
-            });
-            return optionsHTML;
-        })()}
+                        const fontList = [
+                            'Arial', 'VT323', 'Pacifico', 'Lato', 
+                            'Playwrite AU SA', 'Tomorrow', 'Roboto', 
+                            'Montserrat', 'Open Sans', 'Oswald', 
+                            'Raleway', 'Merriweather', 'Dancing Script', 
+                            'Bebas Neue'
+                        ];
+                        let optionsHTML = '';
+                        
+                        fontList.forEach(font => {
+                            const isSelected = obj.fontFamily === font ? 'selected' : '';
+                            optionsHTML += `<option value="${font}" ${isSelected} style="font-family: '${font}';">${font}</option>`;
+                        });
+                        return optionsHTML;
+                    })()}
                 </select>
             </div>
             <div class="tool-group">
@@ -2001,108 +2484,13 @@ function addObjectToList(obj, istext, canvasName) {
                 <button class="select-dlt"><i class="material-icons">delete_forever</i></button>
             </div>
         `;
-        li.querySelector(".text-content").addEventListener("input", (e) => {
-            obj.set("text", e.target.value);
-            canvases[canvasName].renderAll();
-        });
-            // --- CONTROL DE ALINEACIÓN ---
-        const alignButtons = toolsContainer.querySelectorAll(".align-btn");
-        alignButtons.forEach(button => {
-            button.addEventListener("click", (e) => {
-                const alignment = e.currentTarget.dataset.align;
-                
-                // Remover clase active de todos
-                alignButtons.forEach(btn => btn.classList.remove("active"));
-                // Agregar clase active al botón clickeado
-                e.currentTarget.classList.add("active");
-                
-                obj.set("textAlign", alignment);
-                canvases[canvasName].setActiveObject(obj);
-                canvases[canvasName].renderAll();
-                showNotification(`Texto alineado a la ${alignment === 'left' ? 'izquierda' : alignment === 'center' ? 'centro' : alignment === 'right' ? 'derecha' : 'justificado'}`, "info");
-            });
-        });
-        const styleButtons = toolsContainer.querySelectorAll(".style-btn");
-        styleButtons.forEach(button => {
-            button.addEventListener("click", (e) => {
-                const style = e.currentTarget.dataset.style;
-                e.currentTarget.classList.toggle("active");
-                
-                switch(style) {
-                    case 'bold':
-                        obj.set("fontWeight", obj.fontWeight === 'bold' ? 'normal' : 'bold');
-                        break;
-                    case 'italic':
-                        obj.set("fontStyle", obj.fontStyle === 'italic' ? 'normal' : 'italic');
-                        break;
-                    case 'underline':
-                        obj.set("underline", !obj.underline);
-                        break;
-                    case 'linethrough':
-                        obj.set("linethrough", !obj.linethrough);
-                        break;
-                }
-                canvases[canvasName].setActiveObject(obj);
-                canvases[canvasName].renderAll();
-                showNotification(`Estilo ${style} ${e.currentTarget.classList.contains('active') ? 'activado' : 'desactivado'}`, "info");
-            });
-        });
-        // --- CONTROL DE COLOR ---
-        toolsContainer.querySelector(".text-color").addEventListener("input", (e) => {
-            obj.set("fill", e.target.value);
-            canvases[canvasName].setActiveObject(obj);
-            canvases[canvasName].renderAll();
-        });
-
-        // --- CONTROL DE TAMAÑO ---
-        const sizeSlider = toolsContainer.querySelector(".text-size");
-        const sizeText = toolsContainer.querySelector(".text-size-value");
-
-        sizeSlider.addEventListener("input", (e) => {
-            const newSize = parseInt(e.target.value);
-
-            obj.set("fontSize", newSize);
-            obj.initDimensions();
-
-            sizeText.textContent = newSize + "px"; // ← actualiza el texto al lado del slider
-            canvases[canvasName].setActiveObject(obj);
-            canvases[canvasName].renderAll();
-        });
-
-        // --- CONTROL DE FUENTE ---
-        toolsContainer.querySelector(".text-font").addEventListener("change", async (e) => {
-            const newFont = e.target.value;
-
-            try {
-                await document.fonts.load(`16px "${newFont}"`);  
-                obj.set("fontFamily", newFont);
-                obj.initDimensions();
-                canvases[canvasName].setActiveObject(obj);
-                canvases[canvasName].renderAll();
-            } catch (err) {
-                console.error("Error aplicando fuente:", newFont, err);
-            }
-        });
-
-        // --- CONTROL DE BORDE ---
-        toolsContainer.querySelector(".text-border").addEventListener("input", (e) => {
-            obj.set({
-                stroke: e.target.value,
-                strokeWidth: 2
-            });
-            canvases[canvasName].setActiveObject(obj);
-            canvases[canvasName].renderAll();
-        });
-        // --- BOTÓN ELIMINAR ---
-        toolsContainer.querySelector(".select-dlt").addEventListener("click", () => {
-            const realCanvas = canvases[obj._canvasName];
-            realCanvas.remove(obj);
-            realCanvas.renderAll();
-            li.remove();
-            showNotification(`Elemento eliminado en ${selectedTab} correctamente`, "warning");
-        });
-        showNotification("¡Texto agregado!", "success",li);
-    } else if (obj.type === "i-text" && istext===false) {
+        
+        // Configurar eventos para controles de texto
+        setupTextControlEvents(obj, toolsContainer, canvasName);
+        
+        showNotification("¡Texto agregado!", "success", li);
+    } else if (obj.type === "i-text" && istext === false) {
+        // Para emojis
         toolsContainer.innerHTML = `
             <div class="tool-group">
                 <div class="tool-label"><i class="material-icons">add_reaction</i> Emoji - ${objectCounter}</div>
@@ -2116,29 +2504,32 @@ function addObjectToList(obj, istext, canvasName) {
         `;
 
         toolsContainer.querySelector(".select-dlt").addEventListener("click", () => {
-            canvases[canvasName].remove(obj);
-            canvases[canvasName].renderAll();
+            if (canvases && canvases[canvasName]) {
+                canvases[canvasName].remove(obj);
+                canvases[canvasName].renderAll();
+            }
             li.remove();
             showNotification(`Elemento eliminado en ${selectedTab} correctamente`, "warning");
         });
+        
         const sizeSlider = toolsContainer.querySelector(".text-sizeEmo");
         const sizeText = toolsContainer.querySelector(".text-sizeEmo-value");
 
         sizeSlider.addEventListener("input", (e) => {
             const newSize = parseInt(e.target.value);
-
             obj.set("fontSize", newSize);
             obj.initDimensions();
-
-            sizeText.textContent = newSize + "px"; // ← actualiza el texto al lado del slider
-
-            canvases[canvasName].renderAll();
+            sizeText.textContent = newSize + "px";
+            if (canvases && canvases[canvasName]) {
+                canvases[canvasName].renderAll();
+            }
         });
-    }else if (obj.type === "image") {
-        const thumbnail = obj._element.src;  // ★ AQUÍ ESTÁ EL BASE64 DE LA IMAGEN SUBIDA
-
+    } else if (obj.type === "image") {
+        // Para imágenes
+        const thumbnail = obj._element ? obj._element.src : '';
         const initialScale = obj.scaleX * 100;
         const initialRotation = obj.angle || 0;
+        
         toolsContainer.innerHTML = `
         <div class="tool-group">
             <div class="tool-label"><i class="material-icons">image</i> Imagen - ${objectCounter}</div>
@@ -2170,110 +2561,234 @@ function addObjectToList(obj, istext, canvasName) {
         </div>
         `;
 
-        toolsContainer.querySelector(".select-dlt").addEventListener("click", () => {
-            canvases[canvasName].remove(obj);
-            canvases[canvasName].renderAll();
-            li.remove();
-            showNotification(`Elemento eliminado en ${selectedTab} correctamente`, "warning");
-        });
-        // === SLIDER PARA EL TAMAÑO ===
-        const slider = toolsContainer.querySelector(".img-size-slider");
-        const sizeLabel = toolsContainer.querySelector(".img-size-value");
-        const btnPlus = toolsContainer.querySelector(".size-plus");
-        const btnMinus = toolsContainer.querySelector(".size-minus");
-        const MIN = 1;
-        const MAX = 200;
-        const STEP = 5;
-        function applySize(percentage) {
-            percentage = Math.max(MIN, Math.min(MAX, percentage));
-
-            const originalScale = obj._originalScale || 1;
-            const newScale = originalScale * (percentage / 100);
-
-            obj.scale(newScale);
-            obj._currentPercentage = percentage;
-
-            slider.value = percentage;
-            sizeLabel.textContent = percentage + "%";
-
-            canvases[canvasName].setActiveObject(obj);
-            canvases[canvasName].renderAll();
-        }
-
-        slider.addEventListener("input", (e) => {
-            applySize(parseInt(e.target.value));
-        });
-        btnPlus.addEventListener("click", () => {
-            applySize(parseInt(slider.value) + STEP);
-        });
-
-        btnMinus.addEventListener("click", () => {
-            applySize(parseInt(slider.value) - STEP);
-        });
-
-        // === SLIDER PARA LA ROTACIÓN ===
-        const rotationSlider = toolsContainer.querySelector(".rotation-slider");
-        const rotationLabel = toolsContainer.querySelector(".rotation-value");
-
-        rotationSlider.addEventListener("input", (e) => {
-            const angle = parseInt(e.target.value);
-            obj.set({ angle: angle });
-            rotationLabel.textContent = angle + "°";
-            canvases[canvasName].setActiveObject(obj);
-            obj.setCoords();
-            canvases[canvasName].renderAll();
-        });
-
-        // === BOTONES DE ROTACIÓN RÁPIDA ===
-        const rotateLeftBtn = toolsContainer.querySelector(".rotate-left");
-        const rotateRightBtn = toolsContainer.querySelector(".rotate-right");
-        const rotateResetBtn = toolsContainer.querySelector(".rotate-reset");
-
-        // Rotar 90° izquierda
-        rotateLeftBtn.addEventListener("click", () => {
-            const currentAngle = obj.angle || 0;
-            const newAngle = (currentAngle - 90) % 360;
-            obj.set({ angle: newAngle });
-            rotationSlider.value = newAngle;
-            rotationLabel.textContent = Math.round(newAngle) + "°";
-            obj.setCoords();
-            canvases[canvasName].renderAll();
-            showNotification("Rotado 90° a la izquierda", "info");
-        });
-
-        // Rotar 90° derecha
-        rotateRightBtn.addEventListener("click", () => {
-            const currentAngle = obj.angle || 0;
-            const newAngle = (currentAngle + 90) % 360;
-            obj.set({ angle: newAngle });
-            rotationSlider.value = newAngle;
-            rotationLabel.textContent = Math.round(newAngle) + "°";
-            obj.setCoords();
-            canvases[canvasName].renderAll();
-            showNotification("Rotado 90° a la derecha", "info");
-        });
-
-        // Restablecer rotación
-        rotateResetBtn.addEventListener("click", () => {
-            obj.set('angle', 0);
-            rotationSlider.value = 0;
-            rotationLabel.textContent = "0°";
-            obj.setCoords();
-            canvases[canvasName].renderAll();
-            showNotification("Rotación restablecida", "info");
-        });
+        // Configurar eventos para controles de imagen
+        setupImageControlEvents(obj, toolsContainer, canvasName);
     }
+    
     setTimeout(() => {
-        highlightListItem(obj._listId, canvasName, true); // true = efecto temporal
+        highlightListItem(obj._listId, canvasName, true);
     }, 100);
 }
 
-const highlightedElements = {
-    front: null,
-    back: null,
-    leftsleeve: null,
-    rightsleeve: null
-};
+function setupTextControlEvents(obj, toolsContainer, canvasName) {
+    // Contenido del texto
+    toolsContainer.querySelector(".text-content").addEventListener("input", (e) => {
+        obj.set("text", e.target.value);
+        if (canvases && canvases[canvasName]) {
+            canvases[canvasName].renderAll();
+        }
+    });
+    
+    // Alineación
+    const alignButtons = toolsContainer.querySelectorAll(".align-btn");
+    alignButtons.forEach(button => {
+        button.addEventListener("click", (e) => {
+            const alignment = e.currentTarget.dataset.align;
+            alignButtons.forEach(btn => btn.classList.remove("active"));
+            e.currentTarget.classList.add("active");
+            obj.set("textAlign", alignment);
+            if (canvases && canvases[canvasName]) {
+                canvases[canvasName].setActiveObject(obj);
+                canvases[canvasName].renderAll();
+            }
+            showNotification(`Texto alineado a la ${alignment === 'left' ? 'izquierda' : alignment === 'center' ? 'centro' : alignment === 'right' ? 'derecha' : 'justificado'}`, "info");
+        });
+    });
+    
+    // Estilos
+    const styleButtons = toolsContainer.querySelectorAll(".style-btn");
+    styleButtons.forEach(button => {
+        button.addEventListener("click", (e) => {
+            const style = e.currentTarget.dataset.style;
+            e.currentTarget.classList.toggle("active");
+            
+            switch(style) {
+                case 'bold':
+                    obj.set("fontWeight", obj.fontWeight === 'bold' ? 'normal' : 'bold');
+                    break;
+                case 'italic':
+                    obj.set("fontStyle", obj.fontStyle === 'italic' ? 'normal' : 'italic');
+                    break;
+                case 'underline':
+                    obj.set("underline", !obj.underline);
+                    break;
+                case 'linethrough':
+                    obj.set("linethrough", !obj.linethrough);
+                    break;
+            }
+            if (canvases && canvases[canvasName]) {
+                canvases[canvasName].setActiveObject(obj);
+                canvases[canvasName].renderAll();
+            }
+            showNotification(`Estilo ${style} ${e.currentTarget.classList.contains('active') ? 'activado' : 'desactivado'}`, "info");
+        });
+    });
+    
+    // Color
+    toolsContainer.querySelector(".text-color").addEventListener("input", (e) => {
+        obj.set("fill", e.target.value);
+        if (canvases && canvases[canvasName]) {
+            canvases[canvasName].setActiveObject(obj);
+            canvases[canvasName].renderAll();
+        }
+    });
+    
+    // Tamaño
+    const sizeSlider = toolsContainer.querySelector(".text-size");
+    const sizeText = toolsContainer.querySelector(".text-size-value");
+    sizeSlider.addEventListener("input", (e) => {
+        const newSize = parseInt(e.target.value);
+        obj.set("fontSize", newSize);
+        obj.initDimensions();
+        sizeText.textContent = newSize + "px";
+        if (canvases && canvases[canvasName]) {
+            canvases[canvasName].setActiveObject(obj);
+            canvases[canvasName].renderAll();
+        }
+    });
+    
+    // Fuente
+    toolsContainer.querySelector(".text-font").addEventListener("change", async (e) => {
+        const newFont = e.target.value;
+        try {
+            await document.fonts.load(`16px "${newFont}"`);  
+            obj.set("fontFamily", newFont);
+            obj.initDimensions();
+            if (canvases && canvases[canvasName]) {
+                canvases[canvasName].setActiveObject(obj);
+                canvases[canvasName].renderAll();
+            }
+        } catch (err) {
+            console.error("Error aplicando fuente:", newFont, err);
+        }
+    });
+    
+    // Borde
+    toolsContainer.querySelector(".text-border").addEventListener("input", (e) => {
+        obj.set({
+            stroke: e.target.value,
+            strokeWidth: 2
+        });
+        if (canvases && canvases[canvasName]) {
+            canvases[canvasName].setActiveObject(obj);
+            canvases[canvasName].renderAll();
+        }
+    });
+    
+    // Botón eliminar
+    toolsContainer.querySelector(".select-dlt").addEventListener("click", () => {
+        if (canvases && canvases[obj._canvasName]) {
+            const realCanvas = canvases[obj._canvasName];
+            realCanvas.remove(obj);
+            realCanvas.renderAll();
+        }
+        const li = document.getElementById(obj._listId);
+        if (li) li.remove();
+        showNotification(`Elemento eliminado en ${selectedTab} correctamente`, "warning");
+    });
+}
+
+function setupImageControlEvents(obj, toolsContainer, canvasName) {
+    // Botón eliminar
+    toolsContainer.querySelector(".select-dlt").addEventListener("click", () => {
+        if (canvases && canvases[canvasName]) {
+            canvases[canvasName].remove(obj);
+            canvases[canvasName].renderAll();
+        }
+        const li = document.getElementById(obj._listId);
+        if (li) li.remove();
+        showNotification(`Elemento eliminado en ${selectedTab} correctamente`, "warning");
+    });
+    
+    // Tamaño de imagen
+    const slider = toolsContainer.querySelector(".img-size-slider");
+    const sizeLabel = toolsContainer.querySelector(".img-size-value");
+    const btnPlus = toolsContainer.querySelector(".size-plus");
+    const btnMinus = toolsContainer.querySelector(".size-minus");
+    const MIN = 1;
+    const MAX = 200;
+    const STEP = 5;
+    
+    function applySize(percentage) {
+        percentage = Math.max(MIN, Math.min(MAX, percentage));
+        const originalScale = obj._originalScale || 1;
+        const newScale = originalScale * (percentage / 100);
+        obj.scale(newScale);
+        obj._currentPercentage = percentage;
+        slider.value = percentage;
+        sizeLabel.textContent = percentage + "%";
+        if (canvases && canvases[canvasName]) {
+            canvases[canvasName].setActiveObject(obj);
+            canvases[canvasName].renderAll();
+        }
+    }
+
+    slider.addEventListener("input", (e) => {
+        applySize(parseInt(e.target.value));
+    });
+    btnPlus.addEventListener("click", () => {
+        applySize(parseInt(slider.value) + STEP);
+    });
+    btnMinus.addEventListener("click", () => {
+        applySize(parseInt(slider.value) - STEP);
+    });
+    
+    // Rotación
+    const rotationSlider = toolsContainer.querySelector(".rotation-slider");
+    const rotationLabel = toolsContainer.querySelector(".rotation-value");
+    rotationSlider.addEventListener("input", (e) => {
+        const angle = parseInt(e.target.value);
+        obj.set({ angle: angle });
+        rotationLabel.textContent = angle + "°";
+        if (canvases && canvases[canvasName]) {
+            canvases[canvasName].setActiveObject(obj);
+            obj.setCoords();
+            canvases[canvasName].renderAll();
+        }
+    });
+    
+    // Botones de rotación rápida
+    const rotateLeftBtn = toolsContainer.querySelector(".rotate-left");
+    const rotateRightBtn = toolsContainer.querySelector(".rotate-right");
+    const rotateResetBtn = toolsContainer.querySelector(".rotate-reset");
+    
+    rotateLeftBtn.addEventListener("click", () => {
+        const currentAngle = obj.angle || 0;
+        const newAngle = (currentAngle - 90) % 360;
+        obj.set({ angle: newAngle });
+        rotationSlider.value = newAngle;
+        rotationLabel.textContent = Math.round(newAngle) + "°";
+        obj.setCoords();
+        if (canvases && canvases[canvasName]) {
+            canvases[canvasName].renderAll();
+        }
+        showNotification("Rotado 90° a la izquierda", "info");
+    });
+    
+    rotateRightBtn.addEventListener("click", () => {
+        const currentAngle = obj.angle || 0;
+        const newAngle = (currentAngle + 90) % 360;
+        obj.set({ angle: newAngle });
+        rotationSlider.value = newAngle;
+        rotationLabel.textContent = Math.round(newAngle) + "°";
+        obj.setCoords();
+        if (canvases && canvases[canvasName]) {
+            canvases[canvasName].renderAll();
+        }
+        showNotification("Rotado 90° a la derecha", "info");
+    });
+    
+    rotateResetBtn.addEventListener("click", () => {
+        obj.set('angle', 0);
+        rotationSlider.value = 0;
+        rotationLabel.textContent = "0°";
+        obj.setCoords();
+        if (canvases && canvases[canvasName]) {
+            canvases[canvasName].renderAll();
+        }
+        showNotification("Rotación restablecida", "info");
+    });
+}
 
 function highlightListItem(listId, canvasName, temporary = false) {
     // Limpiar resaltado anterior en este canvas
@@ -2323,6 +2838,8 @@ function findListItemByObject(obj) {
 }
 
 function setupCanvasSelectionSync() {
+    if (!canvases) return;
+    
     const canvasNames = ['front', 'back', 'leftsleeve', 'rightsleeve'];
     
     canvasNames.forEach(name => {
@@ -2353,18 +2870,12 @@ function setupCanvasSelectionSync() {
             if (e.target && e.target._listId) {
                 const li = findListItemByObject(e.target);
                 if (li) {
-                    // Actualizar indicador visual de modificación
                     li.classList.add('recently-modified');
                     setTimeout(() => {
                         li.classList.remove('recently-modified');
                     }, 1000);
                 }
             }
-        });
-        
-        // Cuando se agrega un objeto (ya lo haces en addObjectToList)
-        canvas.on('object:added', (e) => {
-            // Tu lógica existente aquí
         });
         
         // Cuando se elimina un objeto
@@ -2384,10 +2895,24 @@ function setupCanvasSelectionSync() {
         });
     });
 }
-setupCanvasSelectionSync();
+
+// ========== EMOJI FUNCTIONS ==========
 
 function addEmoji() {
-    loadEmojiGrid("faces");
+    if (!window.emojiCategories) {
+        fetch('emojis.json')
+            .then(res => res.json())
+            .then(data => {
+                window.emojiCategories = data;
+                loadEmojiGrid("faces");
+            })
+            .catch(err => {
+                console.error('Error cargando emojis:', err);
+                showNotification("Error al cargar emojis", "error");
+            });
+    } else {
+        loadEmojiGrid("faces");
+    }
     document.getElementById("emojiModal").style.display = "block";
     document.body.style.overflow = "hidden";
 }
@@ -2396,26 +2921,20 @@ function closeEmojiModal() {
     document.getElementById("emojiModal").style.display = "none";
     document.body.style.overflow = "auto";
 }
-// Lista de emojis (puedes agregar MUCHOS)
-fetch('emojis.json')
-    .then(res => res.json())
-    .then(data => {
-        window.emojiCategories = data;
-});
-// Cargar emojis por categoría
+
 function loadEmojiGrid(category) {
     const grid = document.getElementById("emojiGrid");
+    if (!grid || !window.emojiCategories || !window.emojiCategories[category]) return;
+    
     grid.innerHTML = "";
 
-    emojiCategories[category].forEach(emoji => {
+    window.emojiCategories[category].forEach(emoji => {
         const span = document.createElement("span");
         span.textContent = emoji;
-
         span.onclick = function() {
             addEmojiToCanvas(emoji);
             closeEmojiModal();
         };
-
         grid.appendChild(span);
     });
 
@@ -2425,27 +2944,21 @@ function loadEmojiGrid(category) {
     });
 }
 
-// Cambiar pestañas de categorías
-document.addEventListener("click", function(e) {
-    if (e.target.classList.contains("emoji-tab")) {
-        loadEmojiGrid(e.target.dataset.cat);
-    }
-});
-
-// Agregar emoji al canvas
 function addEmojiToCanvas(emoji) {
+    if (!canvases || !canvases[selectedTab]) {
+        console.error("Canvas no disponible para agregar emoji");
+        return;
+    }
+    
     const canvas = canvases[selectedTab];
-
     const emojiObj = new fabric.IText(emoji, {
         left: canvas.width / 2,
         top: canvas.height / 2,
         fontSize: 80,
         fontFamily: "Noto Color Emoji, EmojiOne, sans-serif",
         editable: false,
-
         selectable: true,
         evented: true,
-
         lockScalingFlip: true
     });
 
@@ -2457,3 +2970,193 @@ function addEmojiToCanvas(emoji) {
     canvas.renderAll();
 }
 
+// ========== LOADING STATES ==========
+let isLoadingMaterials = false;
+
+function loadMaterials() {
+    // Evitar múltiples ejecuciones simultáneas
+    if (isLoadingMaterials) return;
+    
+    const container = document.querySelector("#step1-content .type-buttons");
+    if (!container) return;
+    
+    isLoadingMaterials = true;
+    
+    showLoadingState(
+        container, 
+        "Buscando materiales", 
+        "Estamos cargando las mejores opciones para ti...",
+        "materials"
+    );
+    
+    disableNavigation(true);
+    
+    const timeout = 10000;
+    const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error("Tiempo de espera agotado")), timeout);
+    });
+    
+    Promise.race([
+        fetch("get_data.php?type=step1"),
+        timeoutPromise
+    ])
+    .then(res => {
+        if (!res.ok) throw new Error(`Error ${res.status}: ${res.statusText}`);
+        return res.json();
+    })
+    .then(data => {
+        const renderMaterial = (item) => {
+            const div = document.createElement("div");
+            div.classList.add("type-button");
+            div.setAttribute("onclick", `selectType("${item.id}", "${item.nombre}", this)`);
+            div.innerHTML = `
+                <img src="img/icon/${item.imgIcon}" alt="${item.nombre}">
+                <span>${item.nombre}</span>
+            `;
+            return div;
+        };
+        
+        showSuccessState(
+            container, 
+            data.materials, 
+            renderMaterial,
+            `${data.materials.length} materiales disponibles`
+        );
+        
+        disableNavigation(false);
+        isLoadingMaterials = false;
+    })
+    .catch(error => {
+        showErrorState(container, error, loadMaterials, "Error al cargar materiales");
+        disableNavigation(false);
+        isLoadingMaterials = false;
+    });
+}
+function showLoadingState(container, title = "Cargando", message = "Por favor espera...", type = "default") {
+    if (!container) return;
+    
+    const loadingId = `${type}-loading`;
+    container.innerHTML = `
+        <div class="loading-state" id="${loadingId}">
+            <div class="loading-animation">
+                <div class="dots">
+                    <div class="dot"></div>
+                    <div class="dot"></div>
+                    <div class="dot"></div>
+                </div>
+            </div>
+            <div class="loading-text">
+                <h4>${title}</h4>
+                <p>${message}</p>
+            </div>
+        </div>
+    `;
+}
+
+function showSuccessState(container, items, renderItem, successMessage = null) {
+    if (!container) return;
+    
+    if (container.dataset.loadingInterval) {
+        clearInterval(parseInt(container.dataset.loadingInterval));
+        delete container.dataset.loadingInterval;
+    }
+    
+    container.innerHTML = "";
+    
+    if (!items || items.length === 0) {
+        showEmptyState(container, "No hay elementos disponibles");
+        return;
+    }
+    
+    items.forEach((item, index) => {
+        setTimeout(() => {
+            const element = renderItem(item);
+            element.classList.add("fade-in");
+            element.style.animationDelay = `${index * 30}ms`;
+            container.appendChild(element);
+        }, index * 30);
+    });
+    
+    if (successMessage) {
+        setTimeout(() => {
+            showNotification(`✓ ${successMessage}`, "success", 2000);
+        }, items.length * 30 + 200);
+    }
+}
+
+function showErrorState(container, error, retryFunction, customMessage = null) {
+    if (!container) return;
+    
+    if (container.dataset.loadingInterval) {
+        clearInterval(parseInt(container.dataset.loadingInterval));
+        delete container.dataset.loadingInterval;
+    }
+    
+    const errorMessage = customMessage || "No pudimos cargar los datos";
+    
+    container.innerHTML = `
+        <div class="error-state">
+            <div class="error-icon">
+                <i class="material-icons">error_outline</i>
+            </div>
+            <h4>Error de conexión</h4>
+            <p>${errorMessage}</p>
+            <p class="error-detail">${error.message || "Error desconocido"}</p>
+            <div class="error-actions">
+                ${retryFunction ? `
+                <button onclick="${retryFunction.name}()" class="btn-primary">
+                    <i class="material-icons">refresh</i> Reintentar
+                </button>
+                ` : ''}
+            </div>
+        </div>
+    `;
+}
+
+function showEmptyState(container, message = "No hay elementos disponibles") {
+    if (!container) return;
+    
+    container.innerHTML = `
+        <div class="empty-state">
+            <div class="empty-icon">
+                <i class="material-icons">inbox</i>
+            </div>
+            <h4>Sin resultados</h4>
+            <p>${message}</p>
+        </div>
+    `;
+}
+
+// ========== EXPORTAR FUNCIONES GLOBALES ==========
+
+Object.assign(window, {
+    switchTab,
+    changeTshirtColor,
+    addText,
+    updateTextFont,
+    updateTextColor,
+    updateTextSize,
+    updateTextBorder,
+    addImage,
+    uploadImage,
+    updateImageBorder,
+    zoomIn,
+    zoomOut,
+    resetZoom,
+    startDesignProcess,
+    nextStep,
+    prevStep,
+    selectType,
+    selectColor,
+    addEmoji,
+    closeEmojiModal,
+    loadEmojiGrid,
+    addEmojiToCanvas,
+    finishDesign,
+    loadMaterials,
+    disableNavigation,
+    showLoadingState,
+    showSuccessState,
+    showErrorState,
+    showEmptyState
+});
