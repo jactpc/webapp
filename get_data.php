@@ -16,7 +16,7 @@ try {
     if ($type === "step1") {
         // Solo trae materiales
         $stmt = $pdo->query("
-            SELECT LPAD(material_polera.id, 4, '0') AS id,
+            SELECT material_polera.id,
                    material_polera.nombre AS nombre,
                    material_polera.imgIcon AS imgIcon,
                    COUNT(*) AS cont
@@ -30,13 +30,13 @@ try {
     else if ($type === "colors" && !empty($material)) {
         // Trae colores según el material seleccionado
         $stmt = $pdo->prepare("
-            SELECT LPAD(color_polera.id, 4, '0') AS id,
+            SELECT color_polera.id,
                    color_polera.nombre AS nombre,
                    color_polera.code_back AS code_back
             FROM color_polera
             JOIN stock_polera ON color_polera.id = stock_polera.id_color
-            WHERE LPAD(stock_polera.id_material, 4, '0') = ?
-            GROUP BY stock_polera.id_color
+            WHERE stock_polera.id_material = ?
+            GROUP BY stock_polera.id_color;
         ");
         $stmt->execute([$material]);
         $response["colors"] = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -44,13 +44,13 @@ try {
     else if ($type === "sizes" && !empty($material) && !empty($color)) {
         // Trae tallas según material y color
         $stmt = $pdo->prepare("
-            SELECT LPAD(tallas_polera.id, 4, '0') as id,
+            SELECT tallas_polera.id,
                    tallas_polera.nombre as nombre,
                    TRUNCATE(medidasx, 0) as x, TRUNCATE(medidasy, 0) as y
             FROM tallas_polera
             JOIN stock_polera ON tallas_polera.id = stock_polera.id_tallas
-            WHERE LPAD(stock_polera.id_material, 4, '0') = ?
-              AND LPAD(stock_polera.id_color, 4, '0') = ?
+            WHERE id_material = ?
+              AND stock_polera.id_color = ?
             GROUP BY tallas_polera.id
             ORDER BY tallas_polera.id ASC
         ");
@@ -59,28 +59,24 @@ try {
     }
     elseif ($type == 'design_assets') {
         // Obtener assets de diseño
-        if (empty($material) || empty($color)) {
+        if (empty($material)) {
             throw new Exception('Material y color requeridos');
         }
         
         $stmt = $pdo->prepare("
             SELECT * FROM design_assets 
-            WHERE material_id = ? AND color_id = ? 
+            WHERE material_id = ?
             AND active = 1 
             AND side IN ('front', 'back', 'leftsleeve', 'rightsleeve')
             ORDER BY priority ASC, side ASC
         ");
         
-        // Asegurar que los IDs sean numéricos (sin padding)
-        $material_id = ltrim($material, '0');
-        $color_id = ltrim($color, '0');
-        
-        $stmt->execute([$material_id, $color_id]);
+        $stmt->execute([$material_id]);
         $assets = $stmt->fetchAll(PDO::FETCH_ASSOC);
         
         // Si no hay assets, intentar con IDs con padding
         if (empty($assets)) {
-            $stmt->execute([$material, $color]);
+            $stmt->execute([$material]);
             $assets = $stmt->fetchAll(PDO::FETCH_ASSOC);
         }
         
@@ -90,7 +86,6 @@ try {
             $formattedAssets[] = [
                 'id' => $row['id'],
                 'material_id' => $row['material_id'],
-                'color_id' => $row['color_id'],
                 'side' => $row['side'],
                 'name' => $row['name'],
                 'image_url' => $row['image_url'],

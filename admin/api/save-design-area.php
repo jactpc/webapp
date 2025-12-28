@@ -12,13 +12,12 @@ if (!isset($_SESSION['admin'])) {
 // Leer datos JSON del cuerpo de la solicitud
 $input = json_decode(file_get_contents('php://input'), true);
 
-if (!$input || !isset($input['material_id']) || !isset($input['color_id']) || !isset($input['side'])) {
+if (!$input || !isset($input['material_id']) || !isset($input['side'])) {
     echo json_encode(['success' => false, 'message' => 'Datos inválidos']);
     exit;
 }
 
 $materialId = intval($input['material_id']);
-$colorId = intval($input['color_id']);
 $side = $conn->real_escape_string($input['side']);
 $areaX = isset($input['area_x']) ? intval($input['area_x']) : null;
 $areaY = isset($input['area_y']) ? intval($input['area_y']) : null;
@@ -29,11 +28,10 @@ try {
     // Verificar si ya existe un registro para este material/color/lado
     $checkSql = "SELECT id FROM design_assets 
                  WHERE material_id = ? 
-                 AND color_id = ? 
                  AND side = ?";
     
     $checkStmt = $conn->prepare($checkSql);
-    $checkStmt->bind_param("iis", $materialId, $colorId, $side);
+    $checkStmt->bind_param("is", $materialId, $side);
     $checkStmt->execute();
     $checkResult = $checkStmt->get_result();
     
@@ -59,7 +57,7 @@ try {
                      VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), NOW())";
         
         $insertStmt = $conn->prepare($insertSql);
-        $insertStmt->bind_param("iisiiii", $materialId, $colorId, $side, $areaX, $areaY, $areaWidth, $areaHeight);
+        $insertStmt->bind_param("isiiii", $materialId, $side, $areaX, $areaY, $areaWidth, $areaHeight);
         $success = $insertStmt->execute();
         $assetId = $conn->insert_id;
         $action = 'created';

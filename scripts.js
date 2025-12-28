@@ -3,6 +3,7 @@ let currentStep = 1;
 const totalSteps = 5;
 let selectedColor = null;
 let selectedColorText = null;
+let selectedColorcode = null;
 let selectedMaterial = null;
 let selectedMaterialText = null;
 let designData = {
@@ -59,9 +60,6 @@ const fonts = [
 ];
 
 let objectCounter = 0;
-
-// Highlighted elements
-let highlightedElements = {};
 
 // ========== INICIALIZACIÓN ==========
 
@@ -406,6 +404,7 @@ function selectType(dataType, nombre, element) {
                     const btn = document.createElement("div");
                     btn.classList.add("color-button");
                     btn.style.background = `#${color.code_back}`;
+                    btn.dataset.id = color.code_back;
                     btn.setAttribute("onclick", `selectColor("${color.id}", "${color.nombre}", this)`);
                     btn.id = color.nombre;
                     btn.setAttribute("title", color.nombre);
@@ -438,16 +437,11 @@ function selectType(dataType, nombre, element) {
 function selectColor(color, nombre, element) {
     selectedColor = `${color}`;
     selectedColorText = nombre;
-    
     // Actualizar UI
     document.querySelectorAll(".color-button").forEach(btn => {
         btn.classList.remove("active");
     });
-    
     if (element) {
-        // Primero cargar assets del diseño
-        loadDesignAssets();
-        
         // Después cargar tallas (si es necesario)
         const sizesContainer = document.querySelector("#step3-content .size-buttons");
         if (sizesContainer) {
@@ -496,7 +490,8 @@ function selectColor(color, nombre, element) {
                     }, "Error al cargar tallas");
                 });
         }
-        
+        selectedColorcode=element.dataset.id;
+        loadDesignAssets();
         element.classList.add("active");
     }
 
@@ -516,7 +511,7 @@ function loadDesignAssets() {
     // Deshabilitar navegación mientras cargamos
     disableNavigation(true);
     
-    fetch(`get_data.php?type=design_assets&material=${selectedMaterial}&color=${selectedColor}`)
+    fetch(`get_data.php?type=design_assets&material=${selectedMaterial}`)
         .then(res => {
             if (!res.ok) throw new Error(`Error ${res.status}: ${res.statusText}`);
             return res.json();
@@ -594,11 +589,11 @@ function createDynamicTabsAndCanvases(assets) {
     
     sortedAssets.forEach((asset, index) => {
         const side = asset.side;
-        
+        console.log(selectedColorcode);
         // Inicializar estado para esta sección
         sectionsState[side] = { 
             json: null, 
-            bgSrc: asset.image_url,
+            bgSrc: `${asset.image_url}?stFondo=${selectedColorcode}`,
             assetData: asset
         };
         
@@ -724,8 +719,8 @@ function getTabIcon(side) {
     const icons = {
         front: "front_hand",
         back: "back_hand",
-        leftsleeve: "pan_tool_left",
-        rightsleeve: "pan_tool_right"
+        leftsleeve: "pan_tool",
+        rightsleeve: "pan_tool"
     };
     return icons[side] || "crop";
 }
@@ -1034,10 +1029,140 @@ function initializeCanvases() {
     
     return canvases;
 }
-
+function updateTextSizeSlider(textObj, newSize) {
+    if (!textObj || !textObj._listId) return;
+    
+    const li = document.getElementById(textObj._listId);
+    if (!li) return;
+    
+    // Buscar el slider y el texto de tamaño
+    const sizeSlider = li.querySelector('.text-size');
+    const sizeText = li.querySelector('.text-size-value');
+    
+    if (sizeSlider && sizeText) {
+        // Actualizar valores
+        const roundedSize = Math.round(newSize);
+        
+        // Asegurarse de que esté dentro de los límites (10-200)
+        const clampedSize = Math.max(10, Math.min(200, roundedSize));
+        
+        sizeSlider.value = clampedSize;
+        sizeText.textContent = clampedSize + "px";
+        
+        // Si el tamaño se ajustó, actualizar el objeto
+        if (clampedSize !== newSize) {
+            textObj.set('fontSize', clampedSize);
+        }
+        
+        // Agregar clase de animación
+        li.classList.add('size-updated');
+        setTimeout(() => {
+            li.classList.remove('size-updated');
+        }, 500);
+        
+        // Mostrar notificación si el cambio es significativo
+        if (Math.abs(textObj._lastFontSize - newSize) > 5) {
+            showNotification(`Tamaño ajustado a ${clampedSize}px`, "info", li, 1500);
+        }
+    }
+    
+    // Guardar el último tamaño para comparar
+    textObj._lastFontSize = newSize;
+}
+function updateEmojiSizeSlider(emojiObj, newSize) {
+    if (!emojiObj || !emojiObj._listId) return;
+    
+    const li = document.getElementById(emojiObj._listId);
+    if (!li) return;
+    
+    // Buscar el slider y el texto de tamaño específico para emojis
+    const sizeSlider = li.querySelector('.text-sizeEmo');
+    const sizeText = li.querySelector('.text-sizeEmo-value');
+    
+    if (sizeSlider && sizeText) {
+        // Actualizar valores
+        const roundedSize = Math.round(newSize);
+        
+        // Asegurarse de que esté dentro de los límites (10-500)
+        const clampedSize = Math.max(10, Math.min(500, roundedSize));
+        
+        sizeSlider.value = clampedSize;
+        sizeText.textContent = clampedSize + "px";
+        
+        // Si el tamaño se ajustó, actualizar el objeto
+        if (clampedSize !== newSize) {
+            emojiObj.set('fontSize', clampedSize);
+        }
+        
+        // Agregar clase de animación
+        li.classList.add('size-updated');
+        setTimeout(() => {
+            li.classList.remove('size-updated');
+        }, 500);
+        
+        // Mostrar notificación si el cambio es significativo
+        if (Math.abs(emojiObj._lastFontSize - newSize) > 5) {
+            showNotification(`Emoji ajustado a ${clampedSize}px`, "info", li, 1500);
+        }
+    }
+    
+    // Guardar el último tamaño para comparar
+    emojiObj._lastFontSize = newSize;
+}
+function updateImageSizeSlider(imgObj, percentage) {
+    if (!imgObj || !imgObj._listId) return;
+    
+    const li = document.getElementById(imgObj._listId);
+    if (!li) return;
+    
+    // Buscar el slider y la etiqueta de tamaño
+    const sizeSlider = li.querySelector('.img-size-slider');
+    const sizeLabel = li.querySelector('.img-size-value');
+    
+    if (sizeSlider && sizeLabel) {
+        // Asegurarse de que esté dentro de los límites (1-200%)
+        const clampedPercentage = Math.max(1, Math.min(200, percentage));
+        
+        // Actualizar valores
+        sizeSlider.value = clampedPercentage;
+        sizeLabel.textContent = clampedPercentage + "%";
+        
+        // Si el porcentaje se ajustó, actualizar el objeto
+        if (clampedPercentage !== percentage) {
+            const originalScale = imgObj._originalScale || 1;
+            const newScale = originalScale * (clampedPercentage / 100);
+            imgObj.scale(newScale);
+            imgObj.setCoords();
+        }
+        
+        // Agregar clase de animación
+        li.classList.add('size-updated');
+        setTimeout(() => {
+            li.classList.remove('size-updated');
+        }, 500);
+        
+        // Mostrar notificación si el cambio es significativo
+        if (Math.abs(imgObj._lastPercentage - percentage) > 5) {
+            showNotification(`Imagen ajustada a ${clampedPercentage}%`, "info", li, 1500);
+        }
+    }
+    
+    // Guardar el último porcentaje para comparar
+    imgObj._lastPercentage = percentage;
+}
 function setupCanvasEvents(canvas, canvasName) {
     // Asignar nombre al canvas
     canvas._canvasName = canvasName;
+    
+    canvas.on('text:editing:entered', (e) => {
+        const obj = e.target;
+        // Si es un emoji, cancelar la edición
+        if (obj && obj.type === 'i-text' && (obj._isEmoji || isEmojiObject(obj))) {
+            canvas.discardActiveObject();
+            canvas.requestRenderAll();
+            showNotification("Los emojis no se pueden editar", "warning");
+        }
+    });
     
     // Cuando se agrega un objeto
     canvas.on('object:added', (e) => {
@@ -1109,6 +1234,36 @@ function setupCanvasEvents(canvas, canvasName) {
             obj.scaleY = 1;
 
             canvas.requestRenderAll();
+             // Determinar si es texto normal o emoji
+            if (obj._isEmoji || isEmojiObject(obj)) {
+                // Es un emoji - usar función específica para emojis
+                if (obj._listId) {
+                    updateEmojiSizeSlider(obj, newFont);
+                }
+            } else {
+                // Es texto normal - usar función para textos
+                if (obj._listId) {
+                    updateTextSizeSlider(obj, newFont);
+                }
+            }
+        }else if (obj && obj.type === 'image') {
+            // Calcular el porcentaje basado en el escalado
+            const originalScale = obj._originalScale || 1;
+            const currentPercentage = Math.round((obj.scaleX / originalScale) * 100);
+            
+            // Actualizar el slider en la lista
+            if (obj._listId) {
+                updateImageSizeSlider(obj, currentPercentage);
+            }
+            
+            // Mantener proporción
+            if (obj.scaleX !== obj.scaleY && e.transform) {
+                if (e.transform.corner.includes('left') || e.transform.corner.includes('right')) {
+                    obj.scaleY = obj.scaleX;
+                } else if (e.transform.corner.includes('top') || e.transform.corner.includes('bottom')) {
+                    obj.scaleX = obj.scaleY;
+                }
+            }
         }
     });
     
@@ -1116,6 +1271,39 @@ function setupCanvasEvents(canvas, canvasName) {
     canvas.on('object:modified', () => {
         if (canvasName === selectedTab) {
             updateMiniMap();
+        }
+    });
+    canvas.on('text:editing:exited', (e) => {
+        const obj = e.target;
+        if (obj && obj.type === 'i-text' && obj._listId) {
+            // Actualizar el textarea en la lista
+            const li = document.getElementById(obj._listId);
+            if (li) {
+                const textarea = li.querySelector('.text-content');
+                if (textarea && textarea.value !== obj.text) {
+                    textarea.value = obj.text;
+                    showNotification("Texto actualizado en la lista", "info", li);
+                }
+            }
+        }
+    });
+    canvas.on('mouse:up', (e) => {
+        const activeObject = canvas.getActiveObject();
+        if (activeObject && activeObject.type === 'i-text' && 
+            activeObject.isEditing && activeObject._listId) {
+            
+            // Cuando el usuario hace clic fuera mientras edita
+            setTimeout(() => {
+                if (!activeObject.isEditing) {
+                    const li = document.getElementById(activeObject._listId);
+                    if (li) {
+                        const textarea = li.querySelector('.text-content');
+                        if (textarea && textarea.value !== activeObject.text) {
+                            textarea.value = activeObject.text;
+                        }
+                    }
+                }
+            }, 100);
         }
     });
 }
@@ -1155,7 +1343,8 @@ function drawDesignArea(section, assetData = null) {
         top: area.y,
         width: area.width,
         height: area.height,
-        fill: 'rgba(0, 150, 255, 0.1)',
+        fill: 'rgba(255, 255, 255, 0)',
+        //fill: 'rgba(0, 149, 255, 0)',
         stroke: '#FF9800',
         strokeWidth: 2,
         strokeDashArray: [10, 5],
@@ -1201,33 +1390,6 @@ function drawDesignArea(section, assetData = null) {
     
     return rect;
 }
-function changeTshirtColor(color, element) {
-    // Inicializar canvases si no están inicializados
-    if (!canvases) {
-        // Los canvases se crearán dinámicamente en loadDesignAssets
-        return;
-    }
-    
-    selectedColor = color;
-    currentColor = color;
-    
-    // Si ya tenemos assets cargados, actualizar fondos
-    if (designAssets && designAssets.length > 0) {
-        Object.keys(canvases).forEach(side => {
-            const asset = designAssets.find(a => a.side === side);
-            if (asset && canvases[side]) {
-                sectionsState[side].bgSrc = asset.image_url;
-                loadBackground(side);
-            }
-        });
-    }
-    
-    document.querySelectorAll(".color-button").forEach(btn => {
-        btn.classList.remove("active");
-    });
-
-    if (element) element.classList.add("active");
-}
 function saveSection(section) {
     if (!canvases || !canvases[section]) {
         console.error(`Canvas ${section} no está disponible para guardar`);
@@ -1245,9 +1407,18 @@ function saveSection(section) {
                 (obj.name && (obj.name === 'designArea' || obj.name === 'designAreaLabel' || obj.name === 'tshirt-bg')));
     });
     
-    // Crear un JSON con solo los objetos de usuario
     sectionsState[section].json = {
-        objects: objects.map(obj => obj.toObject())
+        objects: objects.map(obj => {
+            const objData = obj.toObject();
+            
+            // Añadir metadatos adicionales para diferenciar tipos
+            if (obj.type === 'i-text') {
+                // Añadir información sobre si es emoji
+                objData.isEmoji = isEmojiObject(obj);
+            }
+            
+            return objData;
+        })
     };
     
     console.log(`Sección ${section} guardada con ${objects.length} objetos de usuario`);
@@ -1309,18 +1480,70 @@ function restoreSection(section) {
                     obj.id = generateObjectId();
                 }
                 
-                canvas.add(obj);
+                // FUNCIÓN PARA DETECTAR SI ES EMOJI
+                const isEmoji = (textObject) => {
+                    if (textObject.type !== 'i-text') return false;
+                    
+                    const text = textObject.text;
+                    if (!text) return false;
+                    
+                    // Detectar emojis por longitud y contenido
+                    const emojiRegex = /[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F700}-\u{1F77F}\u{1F780}-\u{1F7FF}\u{1F800}-\u{1F8FF}\u{1F900}-\u{1F9FF}\u{1FA00}-\u{1FA6F}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/u;
+                    
+                    // Si es un solo carácter y es emoji
+                    if (text.length === 1 || (text.length <= 2 && emojiRegex.test(text))) {
+                        return true;
+                    }
+                    
+                    // También verificar por el nombre de fuente (usado para emojis)
+                    if (textObject.fontFamily && (
+                        textObject.fontFamily.includes('emoji') || 
+                        textObject.fontFamily.includes('Emoji') ||
+                        textObject.fontFamily === 'Noto Color Emoji' ||
+                        textObject.fontFamily === 'EmojiOne'
+                    )) {
+                        return true;
+                    }
+                    
+                    return false;
+                };
                 
-                // Recrear la entrada en la lista
-                const isText = obj.type === 'i-text' && obj.text && 
-                               (obj.text.length > 1 || !obj.text.match(/[\u{1F600}-\u{1F64F}]/u));
-                const isEmoji = obj.type === 'i-text' && obj.text && 
-                                (obj.text.length === 1 || obj.text.match(/[\u{1F600}-\u{1F64F}]/u));
-                
-                if (isText || isEmoji) {
-                    addObjectToList(obj, isText, section);
-                } else if (obj.type === 'image') {
-                    addObjectToList(obj, false, section);
+                // Inicializar propiedades según el tipo
+                if (obj.type === 'i-text') {
+                    // Determinar si es texto normal o emoji
+                    if (isEmoji(obj)) {
+                        // Es un emoji
+                        console.log(`Restaurando emoji: ${obj.text}`);
+                        
+                        // Si no tiene ID de lista, crear uno
+                        if (!obj._listId) {
+                            obj._listId = "item-" + obj.id;
+                        }
+                        
+                        // Agregar al canvas
+                        canvas.add(obj);
+                        
+                        // Añadir a la lista como emoji
+                        addObjectToList(obj, false, section); // false = emoji
+                    } else {
+                        // Es texto normal
+                        obj._lastFontSize = obj.fontSize;
+                        canvas.add(obj);
+                        addObjectToList(obj, true, section); // true = texto
+                    }
+                } 
+                else if (obj.type === 'image') {
+                    // Es una imagen
+                    console.log(`Restaurando imagen`);
+                    
+                    // Establecer escala original si no existe
+                    if (!obj._originalScale) {
+                        obj._originalScale = obj.scaleX;
+                        obj._lastPercentage = Math.round((obj.scaleX / obj._originalScale) * 100);
+                    }
+                    
+                    canvas.add(obj);
+                    addObjectToList(obj, false, section); // false = no es texto
                 }
             });
             
@@ -1336,6 +1559,36 @@ function restoreSection(section) {
         updateMiniMap();
         updatePreviews();
     }
+}
+function isEmojiObject(textObject) {
+    if (!textObject || textObject.type !== 'i-text') return false;
+    
+    const text = textObject.text;
+    if (!text) return false;
+    
+    // Detectar emojis por diferentes métodos
+    
+    // Método 1: Expresión regular para emojis Unicode
+    const emojiRegex = /[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F700}-\u{1F77F}\u{1F780}-\u{1F7FF}\u{1F800}-\u{1F8FF}\u{1F900}-\u{1F9FF}\u{1FA00}-\u{1FA6F}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F1E0}-\u{1F1FF}]/u;
+    
+    // Método 2: Longitud y caracteres especiales
+    const isSingleEmoji = text.length <= 2 && emojiRegex.test(text);
+    
+    // Método 3: Verificar fuente específica para emojis
+    const isEmojiFont = textObject.fontFamily && (
+        textObject.fontFamily.includes('emoji') || 
+        textObject.fontFamily.includes('Emoji') ||
+        textObject.fontFamily === 'Noto Color Emoji' ||
+        textObject.fontFamily === 'EmojiOne' ||
+        textObject.fontFamily === 'Apple Color Emoji' ||
+        textObject.fontFamily === 'Segoe UI Emoji'
+    );
+    
+    // Método 4: Tamaño de fuente grande (los emojis suelen ser más grandes)
+    const isLargeFont = textObject.fontSize > 50;
+    
+    // Es un emoji si cumple alguna de estas condiciones
+    return isSingleEmoji || isEmojiFont || (isSingleEmoji && isLargeFont);
 }
 
 function switchTab(tab) {
@@ -1414,12 +1667,29 @@ function loadBackground(section, renderNow = true) {
     const url = state.bgSrc;
     const assetData = state.assetData;
 
-    // Verificar si es SVG
-    const isSVG = url.toLowerCase().endsWith('.svg');
-    
-    if (isSVG) {
-        // Para SVG, usar fabric.loadSVGFromURL
-        loadSVGBackground(url, canvas, assetData, renderNow);
+    // Verificar si es un SVG dinámico de PHP
+    const isDynamicSVG = url.toLowerCase().includes('.php') ||
+                        url.toLowerCase().includes('.svg') || 
+                        url.toLowerCase().includes('svg.php') ||
+                        (url.toLowerCase().includes('.php?') && url.toLowerCase().includes('svg'));
+
+    // Para SVG (incluyendo dinámico de PHP)
+    if (isDynamicSVG || url.toLowerCase().endsWith('.svg')) {
+        // Para SVG dinámico de PHP, agregar parámetros si no los tiene
+        let finalUrl = url;
+        if (isDynamicSVG) {
+            // Agregar el color como parámetro si no está presente
+            const urlObj = new URL(url, window.location.origin);
+            if (!urlObj.searchParams.has('stFondo') && selectedColor) {
+                // Si el color está en formato completo "#RRGGBB", extraer solo el código
+                const colorCode = selectedColor.startsWith('#') ? 
+                                 selectedColor.substring(1) : selectedColor;
+                urlObj.searchParams.set('stFondo', colorCode);
+                finalUrl = urlObj.toString();
+            }
+        }
+        
+        loadSVGBackground(finalUrl, canvas, assetData, renderNow);
     } else {
         // Para imágenes raster (PNG, JPG)
         loadRasterBackground(url, canvas, assetData, renderNow);
@@ -1428,7 +1698,9 @@ function loadBackground(section, renderNow = true) {
 
 function loadSVGBackground(url, canvas, assetData, renderNow = true) {
     const section = canvas._canvasName;
-
+    const cacheBusterUrl = url.includes('?') ? 
+                          `${url}&t=${Date.now()}` : 
+                          `${url}?t=${Date.now()}`;
     fabric.loadSVGFromURL(
         url,
         (objects, options) => {
@@ -1496,7 +1768,6 @@ function loadSVGBackground(url, canvas, assetData, renderNow = true) {
         { crossOrigin: 'anonymous' }
     );
 }
-
 
 function loadRasterBackground(url, canvas, assetData, renderNow = true) {
     const section = canvas._canvasName;
@@ -2959,7 +3230,15 @@ function addEmojiToCanvas(emoji) {
         editable: false,
         selectable: true,
         evented: true,
-        lockScalingFlip: true
+        lockScalingFlip: true,
+        hasControls: true,                  // ← MANTENER CONTROLES
+        hasBorders: true,                   // ← MANTENER BORDES
+        lockMovementX: false,               // ← PERMITIR MOVIMIENTO
+        lockMovementY: false,
+        lockRotation: false,                // ← PERMITIR ROTACIÓN
+        lockScalingX: false,                // ← PERMITIR ESCALADO
+        lockScalingY: false,
+        _isEmoji: true  
     });
 
     canvas.add(emojiObj);
@@ -3127,11 +3406,8 @@ function showEmptyState(container, message = "No hay elementos disponibles") {
     `;
 }
 
-// ========== EXPORTAR FUNCIONES GLOBALES ==========
-
 Object.assign(window, {
     switchTab,
-    changeTshirtColor,
     addText,
     updateTextFont,
     updateTextColor,

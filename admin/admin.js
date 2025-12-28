@@ -120,9 +120,12 @@ function isSVG(src) {
     if (!src) return false;
     
     // Verificar extensión .svg
-    if (src.toLowerCase().endsWith('.svg')) {
+    if (src.toLowerCase().includes('.php') || 
+                        src.toLowerCase().includes('svg.php') ||
+                        (src.toLowerCase().includes('.php?') && src.toLowerCase().includes('svg'))) {
         return true;
     }
+    
     
     // También verificar si contiene "svg" en la URL (por si acaso)
     return src.toLowerCase().includes('.svg');
@@ -334,7 +337,7 @@ document.addEventListener('click', async e => {
         });
         
         // 2. Cargar assets de diseño desde la API
-        const response = await fetch(`api/get-design-assets.php?material_id=${materialId}&color_id=${currentColor}`);
+        const response = await fetch(`api/get-design-assets.php?material_id=${materialId}`);
         const data = await response.json();
         
         if (!data.success || !data.assets) {

@@ -1,0 +1,64 @@
+<?php
+header('Content-Type: image/svg+xml');
+header('Cache-Control: max-age=86400');
+
+// Obtener el color del parámetro stFondo, por defecto #303030
+$stFondo = isset($_GET['stFondo']) ? $_GET['stFondo'] : '303030';
+
+// Validar que sea un color hexadecimal válido
+if (!preg_match('/^([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/', $stFondo)) {
+    $stFondo = '303030';
+}
+$stFondo = '#' . $stFondo;
+// El SVG original con el color dinámico
+echo '<?xml version="1.0" encoding="UTF-8"?>
+<svg id="Layer_1" xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="0 0 750.2 950.7">
+  <defs>
+    <style>
+      .st0 {
+        stroke-dasharray: 2 2;
+      }
+      .st0, .st1, .st2 {
+        fill: none;
+      }
+      .st0, .st1, .st2, .st3 {
+        stroke: #000;
+        stroke-miterlimit: 10;
+      }
+      .st2 {
+        stroke-dasharray: 2;
+      }
+      .st3 {
+        fill: ' . $stFondo . ';
+      }
+    </style>
+  </defs>
+  <g id="Lines">
+    <path id="back" class="st3" d="M667.2,215.6s71.4,173.1,76.7,174.1c0,0-100.5,62.6-105.3,59.9,0,0-16.6,8.6-38,4.8l-23-41.7,11.2,466.7s-49.7,31-202.6,20.8-103.7,9.6-231-24.1l21.4-468.9-25.1,45.4-26.2-2.1s-93.6-41.2-116-63.6l22.5-41.2,57.7-140.1,13.9-18.2,40.6-34.8,82.9-45.4,44.4-15,18.2-13.9s70.6,33.7,168.4,0l20.3,13.9s50.8,16,57.7,21.4l63.1,35.3,52.9,41.7s12.5,18.2,15.2,24.7v.3h.1Z"/>
+    <g id="Back-lines">
+      <path class="st2" d="M26,360.9s41.3,39.3,134.4,70.4"/>
+      <path class="st2" d="M23.3,366.3s41.3,39.3,134.5,70.4"/>
+      <path class="st1" d="M177.2,406.8s11.2-99.5-72-221"/>
+      <polyline class="st2" points="108.3 191.3 151 155 214 118 278 93.3"/>
+      <path class="st2" d="M592.4,431.7s56-11.1,135.1-69.2"/>
+      <path class="st1" d="M479.3,92.2c-109.6,44.4-208.5,0-208.5,0"/>
+      <path class="st1" d="M277.2,87.4s.3,0,.9.3"/>
+      <path class="st0" d="M280.1,88.4c16.9,6,107.2,34.7,192.1-.3"/>
+      <path class="st1" d="M473.1,87.8c.3,0,.6-.3.9-.4"/>
+      <path class="st1" d="M158,871.3s84.5-3.2,139,15,132.1,6.4,132.1,6.4c0,0,115.5-33.7,160.4-15.5"/>
+      <path class="st1" d="M157.6,846h1"/>
+      <path class="st0" d="M160.5,845.9c15.5-.4,87.6-1.1,136,15.1,54.5,18.2,132.1,6.4,132.1,6.4,0,0,112.4-32.8,158.5-16.2"/>
+      <path class="st1" d="M588.1,851.5c.3,0,.6.2.9.4"/>
+      <path class="st1" d="M157.6,837.3h1"/>
+      <path class="st0" d="M160.5,837.2c15.5-.4,87.6-1.1,136,15.1,54.5,18.2,132.1,6.4,132.1,6.4,0,0,112.4-32.8,158.5-16.2"/>
+      <path class="st1" d="M588.1,842.8c.3,0,.6.2.9.4"/>
+      <path class="st1" d="M277.2,89.4s.3,0,.9.3"/>
+      <path class="st0" d="M280,90.5c16.9,6,107.2,34.7,192.1-.3"/>
+      <path class="st1" d="M473,89.8c.3,0,.6-.3.9-.4"/>
+      <polyline class="st2" points="474.4 94.9 527.6 112.7 591.7 147.6 645.9 189.7"/>
+      <path class="st2" d="M595.3,437.1s56-11.1,135.1-69.1"/>
+      <path class="st1" d="M652.6,190s-68,73.6-74.4,223.3"/>
+    </g>
+  </g>
+</svg>';
+?>
