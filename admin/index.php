@@ -49,7 +49,7 @@ $isLogged = isset($_SESSION['admin']);
         </div>
     </div>
     <div class="canvas-right">
-        <h2 class="panel-title"> Fondo</h2>
+        <h2 class="panel-title">Opciones</h2>
         <div class="tabs">
             <div class="tab active" data-tab="front" onclick="switchOpt('front')">
                 <span class="tab-title">Pecho</span>
@@ -65,42 +65,35 @@ $isLogged = isset($_SESSION['admin']);
                 <span class="tab-title">Manga Der.</span>
             </div>
         </div>
-        <h2 class="panel-title">Opciones</h2>
         <div class="canvas-controls">
+            <h2 class="panel-title">Area para diseño</h2>
+            <div class="tool-wrapper">
+                <span class="tool-title">Area</span>
+                <label>X
+                <input type="number" id="rect-x">
+                </label>
 
-        <div class="tool-wrapper">
-            <span class="tool-title">Area</span>
+                <label>Y
+                <input type="number" id="rect-y">
+                </label>
 
-            <label>X
-            <input type="number" id="rect-x">
-            </label>
+                <label>Ancho
+                <input type="number" id="rect-width">
+                </label>
 
-            <label>Y
-            <input type="number" id="rect-y">
-            </label>
-
-            <label>Ancho
-            <input type="number" id="rect-width">
-            </label>
-
-            <label>Alto
-            <input type="number" id="rect-height">
-            </label>
+                <label>Alto
+                <input type="number" id="rect-height">
+                </label>
+            </div>
+            <div class="tool-wrapper">
+                <span class="tool-title">Área de diseño</span>
+                <button id="toggle-rect">Guardar</button>
+            </div>
         </div>
-
-        <div class="tool-wrapper">
-            <span class="tool-title">Área de diseño</span>
-            <button id="toggle-rect">Guardar</button>
-        </div>
-
-        </div>
-
     </div>
 </div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/4.5.0/fabric.min.js"></script>
 <script src="admin.js"></script>
-
 <?php endif; ?>
-
 </body>
 </html>
